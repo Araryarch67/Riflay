@@ -9,6 +9,7 @@ import '../player_controller.dart';
 import 'connect_channel.dart';
 import 'connect_protocol.dart' show connectRef;
 import 'connect_store.dart';
+import 'connect_stream.dart';
 
 /// Riflay Connect, stage 2: two paired people look at each other's shared albums, artists and playlists.
 ///
@@ -47,18 +48,27 @@ enum ShareKind { album, artist, playlist }
 String _clip(String s, int max) => s.length <= max ? s : s.substring(0, max);
 
 class ShareTrack {
-  const ShareTrack(this.title, this.artist);
+  const ShareTrack(this.title, this.artist, {this.ref});
 
   final String title;
   final String artist;
 
-  Map<String, dynamic> toJson() => {'t': title, 'a': artist};
+  /// A hash that names the song for streaming, present only when its owner marked it as their own (see
+  /// `ConnectOwnership`). Never a path or an id.
+  final String? ref;
+
+  Map<String, dynamic> toJson() => {'t': title, 'a': artist, 'r': ?ref};
 
   static ShareTrack? fromJson(Object? j) {
     if (j is! Map<String, dynamic>) return null;
     final t = j['t'], a = j['a'];
     if (t is! String || a is! String) return null;
-    return ShareTrack(cleanConnectName(t, fallback: '', max: 200), cleanConnectName(a, fallback: '', max: 200));
+    final r = j['r'];
+    return ShareTrack(
+      cleanConnectName(t, fallback: '', max: 200),
+      cleanConnectName(a, fallback: '', max: 200),
+      ref: r is String && RegExp(r'^[0-9a-f]{16}$').hasMatch(r) ? r : null,
+    );
   }
 }
 
@@ -161,8 +171,23 @@ class ShareCollection {
 }
 
 /// The one place a local album, artist or playlist becomes something that can be sent: titles and artists only.
-ShareCollection shareOf(ShareKind kind, String key, String name, Iterable<Track> tracks, {String? artist, int? year}) {
-  final list = [for (final t in tracks.take(shareMaxTracks)) ShareTrack(_clip(t.title, 200), _clip(t.artist, 200))];
+ShareCollection shareOf(
+  ShareKind kind,
+  String key,
+  String name,
+  Iterable<Track> tracks, {
+  String? artist,
+  int? year,
+  ConnectOwnership? ownership,
+}) {
+  final list = [
+    for (final t in tracks.take(shareMaxTracks))
+      ShareTrack(
+        _clip(t.title, 200),
+        _clip(t.artist, 200),
+        ref: ownership?.canStream(t) == true ? connectRef(t.id) : null,
+      ),
+  ];
   return ShareCollection(
     ShareEntry(
       id: connectRef('share/${kind.name}/$key'),
@@ -177,18 +202,27 @@ ShareCollection shareOf(ShareKind kind, String key, String name, Iterable<Track>
 }
 
 /// Everything this device could share: its albums, artists and playlists. The person picks what actually goes.
-List<ShareCollection> shareSourceOf(PlayerController p) => [
-  for (final c in p.albums)
-    shareOf(
-      ShareKind.album,
-      '${c.title.toLowerCase()}|${c.subtitle.toLowerCase()}',
-      c.title,
-      c.tracks,
-      artist: c.subtitle,
-    ),
-  for (final c in p.artists) shareOf(ShareKind.artist, c.title.toLowerCase(), c.title, c.tracks),
-  for (final l in p.playlists) shareOf(ShareKind.playlist, l.id, l.name, l.tracks),
+List<ShareCollection> shareSourceOf(PlayerController p, {ConnectOwnership? ownership}) => [
+  for (final (c, _) in _shareParts(p, ownership)) c,
 ];
+
+/// The songs behind each shareable collection, by share id. Stays on this device: only [shareSourceOf] is sent.
+Map<String, List<Track>> shareTracksOf(PlayerController p) => {
+  for (final (c, tracks) in _shareParts(p, null)) c.id: tracks,
+};
+
+Iterable<(ShareCollection, List<Track>)> _shareParts(PlayerController p, ConnectOwnership? o) sync* {
+  for (final c in p.albums) {
+    final key = '${c.title.toLowerCase()}|${c.subtitle.toLowerCase()}';
+    yield (shareOf(ShareKind.album, key, c.title, c.tracks, artist: c.subtitle, ownership: o), c.tracks);
+  }
+  for (final c in p.artists) {
+    yield (shareOf(ShareKind.artist, c.title.toLowerCase(), c.title, c.tracks, ownership: o), c.tracks);
+  }
+  for (final l in p.playlists) {
+    yield (shareOf(ShareKind.playlist, l.id, l.name, l.tracks, ownership: o), l.tracks);
+  }
+}
 
 /// Splits [items] so each piece's JSON stays within [maxBytes]; always at least one piece, so an empty list still
 /// says "nothing" to the other side.
@@ -416,8 +450,10 @@ class ConnectShare extends ChangeNotifier {
 
   static final _instances = Expando<ConnectShare>('ConnectShare');
 
-  static ConnectShare of(PlayerController c) =>
-      _instances[c] ??= ConnectShare(source: () => shareSourceOf(c), changes: c);
+  static ConnectShare of(PlayerController c) => _instances[c] ??= ConnectShare(
+    source: () => shareSourceOf(c, ownership: ConnectOwnership.shared),
+    changes: Listenable.merge([c, ConnectOwnership.shared]),
+  );
 
   @visibleForTesting
   static void use(PlayerController c, ConnectShare s) => _instances[c] = s;
@@ -442,6 +478,7 @@ class ConnectShare extends ChangeNotifier {
   bool get loaded => _owner != null;
 
   Future<void> load() => _loading ??= () async {
+    unawaited(ConnectOwnership.shared.ensureLoaded());
     final store = _store = await _openStore();
     final owner = ShareOwner(
       source: source,

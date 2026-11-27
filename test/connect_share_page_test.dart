@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:riflay/models/track.dart';
 import 'package:riflay/services/connect/connect_share.dart';
 import 'package:riflay/services/connect/connect_store.dart';
+import 'package:riflay/services/connect/connect_stream.dart';
 import 'package:riflay/ui/pages/connect_share_page.dart';
 import 'package:riflay/ui/player_scope.dart';
 import 'package:riflay/ui/shell_scope.dart';
@@ -14,10 +15,20 @@ void main() {
   late ConnectShare share;
   late List<ShareCollection> source;
   late Track track;
+  late ConnectOwnership own;
+  late Track downloaded;
 
   setUp(() async {
     SharedPreferences.setMockInitialValues({});
     track = Track.fromUri(Uri.file('/home/ana/Music/Secret Folder/Song.flac'));
+    own = ConnectOwnership({});
+    downloaded = Track(
+      id: 'dl',
+      uri: Uri.file('/home/ana/Music/Bought.flac'),
+      title: 'Bought',
+      artist: 'Ana',
+      sourceUrl: 'https://service.example/1',
+    );
     source = [
       shareOf(ShareKind.album, 'blue', 'Blue Album', [track], artist: 'Ana'),
       shareOf(ShareKind.artist, 'ana', 'Ana', [track]),
@@ -53,7 +64,14 @@ void main() {
             importFromYoutube: ({url}) {},
             addFiles: () {},
             addFolder: null,
-            child: ConnectSharePage(share: share),
+            child: ConnectSharePage(
+              share: share,
+              ownership: own,
+              tracksOf: () => {
+                source[0].id: [track],
+                source[1].id: [downloaded],
+              },
+            ),
           ),
         ),
       ),
@@ -129,5 +147,32 @@ void main() {
     await settle(tester);
     expect(share.copies.single.entry.name, 'Their Album');
     expect(share.selected, isEmpty, reason: 'a copy is not shared onwards');
+  });
+
+  testWidgets('streaming is a separate, explicit choice that starts off', (tester) async {
+    await open(tester);
+    expect(find.byType(SwitchListTile), findsNothing, reason: 'an unshared collection offers no streaming');
+
+    await tester.tap(find.widgetWithText(CheckboxListTile, 'Blue Album'));
+    await settle(tester);
+    final tile = find.byType(SwitchListTile);
+    expect(tile, findsOneWidget);
+    expect(tester.widget<SwitchListTile>(tile).value, isFalse);
+    expect(own.canStream(track), isFalse);
+
+    await tester.tap(tile);
+    await settle(tester);
+    expect(own.canStream(track), isTrue);
+    await tester.tap(tile);
+    await settle(tester);
+    expect(own.canStream(track), isFalse);
+  });
+
+  testWidgets('a shared collection of downloaded songs cannot be marked', (tester) async {
+    await open(tester);
+    await tester.tap(find.widgetWithText(CheckboxListTile, 'Ana'));
+    await settle(tester);
+    expect(find.byType(SwitchListTile), findsNothing);
+    expect(own.canStream(downloaded), isFalse);
   });
 }

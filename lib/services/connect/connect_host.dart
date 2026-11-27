@@ -8,6 +8,8 @@ import '../listen_together/internet.dart';
 import '../player_controller.dart';
 import 'connect_channel.dart';
 import 'connect_protocol.dart';
+import 'connect_rtc.dart';
+import 'connect_rtc_webrtc.dart';
 import 'connect_share.dart';
 import 'connect_store.dart';
 
@@ -114,6 +116,7 @@ class ConnectHost extends ChangeNotifier {
     ConnectLinkOpener? opener,
     this.deviceName = 'Riflay',
     this.share,
+    this.rtc,
     Random? random,
     int Function()? clock,
     this.stateDelay = const Duration(milliseconds: 300),
@@ -126,8 +129,12 @@ class ConnectHost extends ChangeNotifier {
 
   static final _instances = Expando<ConnectHost>('ConnectHost');
 
-  static ConnectHost of(PlayerController c) =>
-      _instances[c] ??= ConnectHost(c, deviceName: defaultConnectDeviceName(), share: ConnectShare.of(c));
+  static ConnectHost of(PlayerController c) => _instances[c] ??= ConnectHost(
+    c,
+    deviceName: defaultConnectDeviceName(),
+    share: ConnectShare.of(c),
+    rtc: connectRtcOf(c),
+  );
 
   /// Makes [host] the one [of] returns for [c] (tests with a made-up broker).
   @visibleForTesting
@@ -146,6 +153,9 @@ class ConnectHost extends ChangeNotifier {
 
   /// Sharing collections over the same rooms.
   final ConnectShare? share;
+
+  /// The data channels that carry shared songs (stage 3).
+  final ConnectRtc? rtc;
 
   ConnectStore? _store;
   var _enabled = false;
@@ -225,6 +235,7 @@ class ConnectHost extends ChangeNotifier {
         unawaited(r.channel?.close());
         r.channel = null;
         share?.detach(r.peer.id);
+        rtc?.detach(r.peer.id);
       }
       _unreachable = false;
     }
@@ -396,6 +407,7 @@ class ConnectHost extends ChangeNotifier {
       unawaited(r.channel?.close());
       r.channel = null;
       share?.detach(r.peer.id);
+      rtc?.detach(r.peer.id);
     }
     if (!_enabled || _brokers[b.index] != b) return;
     _unreachable = true;
@@ -417,6 +429,7 @@ class ConnectHost extends ChangeNotifier {
     final keys = ConnectKeys.paired(r.peer.secret);
     final channel = r.channel = ConnectChannel(link, keys.key, sendTopic: keys.toController, receiveTopic: keys.toHost);
     share?.attach(r.peer.id, r.peer.name, channel.send);
+    rtc?.attach(r.peer.id, channel.send);
     r.sub = channel.messages.listen((m) => unawaited(_onMessage(r, m)));
   }
 
@@ -426,6 +439,7 @@ class ConnectHost extends ChangeNotifier {
     // Anything that opens with the pair key is from that controller: it is here, so ask what it shares.
     share?.heard(room.peer.id);
     if (ConnectShare.isShare(m)) return share?.handle(room.peer.id, m);
+    if (ConnectRtc.isRtc(m)) return rtc?.handle(room.peer.id, m);
     final n = m['n'], command = ConnectCommand.fromJson(m);
     if (n is! int || command == null || n <= room.lastN) return;
     room.lastN = n;

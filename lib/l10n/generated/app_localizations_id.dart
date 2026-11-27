@@ -8173,4 +8173,15 @@ class AppLocalizationsId extends AppLocalizations {
   String connectShareReadOnly(String name) {
     return 'Dibagikan oleh $name. Kamu hanya bisa melihat.';
   }
+
+  @override
+  String get connectOwnTitle => 'Alirkan ini sebagai file milik saya';
+
+  @override
+  String get connectOwnHint =>
+      'Perangkat yang dipasangkan bisa memutar lagu ini dari komputer ini. Hanya file yang Anda tandai sebagai milik sendiri yang pernah dialirkan; lagu dari layanan streaming atau unduhan dari layanan tidak akan pernah.';
+
+  @override
+  String get connectStreamFailed =>
+      'Tidak bisa terhubung ke komputer. Coba lagi di Wi-Fi atau jaringan yang sama, atau atur relay di Riflay Connect.';
 }

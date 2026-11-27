@@ -9,6 +9,7 @@ import '../../services/connect/connect_controller.dart';
 import '../../services/connect/connect_host.dart';
 import '../../services/connect/connect_channel.dart';
 import '../../services/connect/connect_protocol.dart';
+import '../../services/connect/connect_rtc_webrtc.dart';
 import '../../services/connect/connect_share.dart';
 import '../../services/language.dart';
 import '../../services/listen_together/protocol.dart' show SharedTrack;
@@ -51,6 +52,7 @@ class _ConnectPageState extends State<ConnectPage> {
     }
     _share ??= widget.share ?? ConnectShare.of(PlayerScope.read(context));
     _controller.share ??= _share;
+    _controller.rtc ??= connectRtcOf(PlayerScope.read(context));
     unawaited(_controller.load());
   }
 

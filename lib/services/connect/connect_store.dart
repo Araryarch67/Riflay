@@ -110,6 +110,16 @@ class ConnectStore {
   Future<void> saveShareCopies(List<ShareCollection> copies) =>
       _prefs.setString(_copiesKey, jsonEncode([for (final c in copies) c.toJson()]));
 
+  // --- Streaming (stage 3). Local song ids the owner marked as their own; nothing is marked by default. ---
+
+  static const _ownKey = 'connect_own_ids';
+
+  List<String> get ownIds => [
+    for (final id in _list(_ownKey))
+      if (id is String) id,
+  ];
+  Future<void> saveOwnIds(List<String> ids) => _prefs.setString(_ownKey, jsonEncode(ids));
+
   List<Object?> _list(String key) => switch (_json(key)) {
     final List<Object?> l => l,
     _ => const [],

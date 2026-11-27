@@ -4172,5 +4172,8 @@
   "connectShareCopies": "Your copies",
   "connectShareCopiesHint": "A copy is yours to rename or remove. It no longer follows the person who shared it.",
   "connectShareReadOnly": "Shared by {name}. You can look, not change.",
-  "@connectShareReadOnly": {"placeholders": {"name": {"type": "String"}}}
+  "@connectShareReadOnly": {"placeholders": {"name": {"type": "String"}}},
+  "connectOwnTitle": "Stream these as my own files",
+  "connectOwnHint": "Paired devices can play these songs from this computer. Only files you mark as yours are ever streamed; songs from streaming services or downloaded from a service never are.",
+  "connectStreamFailed": "Couldn't reach the computer. Try again on the same Wi-Fi or network, or set up a relay in Riflay Connect."
 }

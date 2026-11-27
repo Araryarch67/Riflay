@@ -8234,4 +8234,15 @@ class AppLocalizationsEn extends AppLocalizations {
   String connectShareReadOnly(String name) {
     return 'Shared by $name. You can look, not change.';
   }
+
+  @override
+  String get connectOwnTitle => 'Stream these as my own files';
+
+  @override
+  String get connectOwnHint =>
+      'Paired devices can play these songs from this computer. Only files you mark as yours are ever streamed; songs from streaming services or downloaded from a service never are.';
+
+  @override
+  String get connectStreamFailed =>
+      'Couldn\'t reach the computer. Try again on the same Wi-Fi or network, or set up a relay in Riflay Connect.';
 }

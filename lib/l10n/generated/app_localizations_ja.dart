@@ -7983,4 +7983,14 @@ class AppLocalizationsJa extends AppLocalizations {
   String connectShareReadOnly(String name) {
     return '$name が共有中。見るだけで変更はできません。';
   }
+
+  @override
+  String get connectOwnTitle => '自分のファイルとして配信する';
+
+  @override
+  String get connectOwnHint =>
+      'ペアリングした端末がこのコンピューターからこれらの曲を再生できます。自分のものとして印を付けたファイルだけが配信され、ストリーミングサービスの曲やサービスからダウンロードした曲は配信されません。';
+
+  @override
+  String get connectStreamFailed => 'コンピューターに接続できませんでした。同じWi-Fiまたはネットワークで再試行するか、Riflay Connectでリレーを設定してください。';
 }

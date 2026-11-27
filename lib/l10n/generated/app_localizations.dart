@@ -14738,6 +14738,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Shared by {name}. You can look, not change.'**
   String connectShareReadOnly(String name);
+
+  /// No description provided for @connectOwnTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Stream these as my own files'**
+  String get connectOwnTitle;
+
+  /// No description provided for @connectOwnHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Paired devices can play these songs from this computer. Only files you mark as yours are ever streamed; songs from streaming services or downloaded from a service never are.'**
+  String get connectOwnHint;
+
+  /// No description provided for @connectStreamFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t reach the computer. Try again on the same Wi-Fi or network, or set up a relay in Riflay Connect.'**
+  String get connectStreamFailed;
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

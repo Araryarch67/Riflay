@@ -2459,5 +2459,8 @@
   "connectShareCopies": "Salinanmu",
   "connectShareCopiesHint": "Salinan milikmu: bisa diganti nama atau dihapus. Salinan tidak lagi mengikuti pembagi aslinya.",
   "connectShareReadOnly": "Dibagikan oleh {name}. Kamu hanya bisa melihat.",
-  "@connectShareReadOnly": {"placeholders": {"name": {"type": "String"}}}
+  "@connectShareReadOnly": {"placeholders": {"name": {"type": "String"}}},
+  "connectOwnTitle": "Alirkan ini sebagai file milik saya",
+  "connectOwnHint": "Perangkat yang dipasangkan bisa memutar lagu ini dari komputer ini. Hanya file yang Anda tandai sebagai milik sendiri yang pernah dialirkan; lagu dari layanan streaming atau unduhan dari layanan tidak akan pernah.",
+  "connectStreamFailed": "Tidak bisa terhubung ke komputer. Coba lagi di Wi-Fi atau jaringan yang sama, atau atur relay di Riflay Connect."
 }

@@ -2452,5 +2452,8 @@
   "connectShareCopies": "あなたのコピー",
   "connectShareCopiesHint": "コピーは名前の変更や削除ができます。共有した相手の変更には追従しません。",
   "connectShareReadOnly": "{name} が共有中。見るだけで変更はできません。",
-  "@connectShareReadOnly": {"placeholders": {"name": {"type": "String"}}}
+  "@connectShareReadOnly": {"placeholders": {"name": {"type": "String"}}},
+  "connectOwnTitle": "自分のファイルとして配信する",
+  "connectOwnHint": "ペアリングした端末がこのコンピューターからこれらの曲を再生できます。自分のものとして印を付けたファイルだけが配信され、ストリーミングサービスの曲やサービスからダウンロードした曲は配信されません。",
+  "connectStreamFailed": "コンピューターに接続できませんでした。同じWi-Fiまたはネットワークで再試行するか、Riflay Connectでリレーを設定してください。"
 }

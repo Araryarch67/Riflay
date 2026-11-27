@@ -7,6 +7,7 @@ import '../listen_together/internet.dart';
 import '../listen_together/protocol.dart' show SharedTrack;
 import 'connect_channel.dart';
 import 'connect_protocol.dart';
+import 'connect_rtc.dart';
 import 'connect_share.dart';
 import 'connect_store.dart';
 
@@ -60,6 +61,9 @@ class ConnectController extends ChangeNotifier {
 
   /// Sharing collections over the same room; the screen sets it (it needs the player).
   ConnectShare? share;
+
+  /// Playing shared songs from the desktop over a direct connection; the screen sets it too.
+  ConnectRtc? rtc;
 
   ConnectStore? _store;
   var _loaded = false;
@@ -212,7 +216,10 @@ class ConnectController extends ChangeNotifier {
   }
 
   void _stop() {
-    if (_active case final host?) share?.detach(host.id);
+    if (_active case final host?) {
+      share?.detach(host.id);
+      rtc?.detach(host.id);
+    }
     _retry?.cancel();
     _keepAlive?.cancel();
     _silence?.cancel();
@@ -238,6 +245,7 @@ class ConnectController extends ChangeNotifier {
         receiveTopic: keys.toController,
       );
       share?.attach(host.id, host.name, channel.send);
+      rtc?.attach(host.id, channel.send);
       _sub = channel.messages.listen((m) => _onMessage(m, session));
       unawaited(link.down.then((_) => _dropped(session)));
       // Connected means the desktop answered, not that the broker did: until then we don't know it's there.
@@ -258,6 +266,7 @@ class ConnectController extends ChangeNotifier {
   void _onMessage(Map<String, dynamic> m, int session) {
     if (session != _session) return;
     final host = _active;
+    if (host != null && ConnectRtc.isRtc(m)) return rtc?.handle(host.id, m);
     if (host != null && ConnectShare.isShare(m)) return unawaited(share?.handle(host.id, m) ?? Future.value());
     switch (m['t']) {
       case 'state':

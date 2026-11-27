@@ -2,7 +2,11 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
+import '../../models/track.dart';
+import '../../services/connect/connect_rtc.dart';
+import '../../services/connect/connect_rtc_webrtc.dart';
 import '../../services/connect/connect_share.dart';
+import '../../services/connect/connect_stream.dart';
 import '../../services/language.dart';
 import '../player_scope.dart';
 import '../shell_scope.dart';
@@ -12,11 +16,15 @@ import '../widgets/page_scaffold.dart';
 import 'sound_settings.dart' show SettingsCard;
 
 /// Riflay Connect › Shared music: pick which albums, artists and playlists to share, look at what a paired device
-/// shares, and keep copies. [share] is only for tests.
+/// shares, and keep copies. [share], [ownership] and [tracksOf] are only for tests.
 class ConnectSharePage extends StatefulWidget {
-  const ConnectSharePage({super.key, this.share});
+  const ConnectSharePage({super.key, this.share, this.ownership, this.tracksOf});
 
   final ConnectShare? share;
+  final ConnectOwnership? ownership;
+
+  /// The songs behind a shared collection's id, on this device.
+  final Map<String, List<Track>> Function()? tracksOf;
 
   @override
   State<ConnectSharePage> createState() => _ConnectSharePageState();
@@ -26,6 +34,8 @@ class _ConnectSharePageState extends State<ConnectSharePage> {
   ConnectShare? _share;
   List<ShareCollection> _candidates = const [];
   ShareKind? _kind;
+  ConnectOwnership? _own;
+  Map<String, List<Track>> _tracks = const {};
 
   @override
   void didChangeDependencies() {
@@ -35,6 +45,9 @@ class _ConnectSharePageState extends State<ConnectSharePage> {
     unawaited(s.load());
     // Worked out once: a library can hold thousands of songs.
     _candidates = s.candidates();
+    _tracks = widget.tracksOf?.call() ?? shareTracksOf(PlayerScope.read(context));
+    final own = _own = widget.ownership ?? ConnectOwnership.shared;
+    unawaited(own.ensureLoaded().then((_) => mounted ? setState(() {}) : null));
   }
 
   @override
@@ -101,14 +114,34 @@ class _ConnectSharePageState extends State<ConnectSharePage> {
               itemCount: shown.length,
               itemBuilder: (context, i) {
                 final c = shown[i];
+                final own = _own,
+                    mine = [
+                      for (final t in _tracks[c.id] ?? const <Track>[])
+                        if (connectIsOwnFile(t)) t,
+                    ];
                 return box(
-                  CheckboxListTile(
-                    contentPadding: EdgeInsets.zero,
-                    controlAffinity: ListTileControlAffinity.trailing,
-                    value: share.selected.contains(c.id),
-                    onChanged: share.loaded ? (on) => unawaited(share.setShared(c.id, on ?? false)) : null,
-                    title: Text(c.entry.name, maxLines: 1, overflow: TextOverflow.ellipsis),
-                    subtitle: Text(_meta(c.entry), maxLines: 1, overflow: TextOverflow.ellipsis),
+                  Column(
+                    children: [
+                      CheckboxListTile(
+                        contentPadding: EdgeInsets.zero,
+                        controlAffinity: ListTileControlAffinity.trailing,
+                        value: share.selected.contains(c.id),
+                        onChanged: share.loaded ? (on) => unawaited(share.setShared(c.id, on ?? false)) : null,
+                        title: Text(c.entry.name, maxLines: 1, overflow: TextOverflow.ellipsis),
+                        subtitle: Text(_meta(c.entry), maxLines: 1, overflow: TextOverflow.ellipsis),
+                      ),
+                      // Streaming is a second, explicit choice, and only for a collection that is shared and holds
+                      // files that are the person's own.
+                      if (own != null && mine.isNotEmpty && share.selected.contains(c.id))
+                        SwitchListTile(
+                          contentPadding: const EdgeInsets.only(left: 16),
+                          dense: true,
+                          value: own.markedIn(mine) == mine.length,
+                          onChanged: (on) => unawaited(own.mark(mine, on).then((_) => setState(() {}))),
+                          title: Text(tr.connectOwnTitle),
+                          subtitle: Text(tr.connectOwnHint),
+                        ),
+                    ],
                   ),
                 );
               },
@@ -304,12 +337,32 @@ class _CollectionPage extends StatelessWidget {
                 dense: true,
                 title: Text(c.tracks[i].title, maxLines: 1, overflow: TextOverflow.ellipsis),
                 subtitle: Text(c.tracks[i].artist, maxLines: 1, overflow: TextOverflow.ellipsis),
+                // Only songs their owner marked as their own can be played from here.
+                onTap: peerId != null && c.tracks[i].ref != null ? () => unawaited(_play(context, c.tracks, i)) : null,
+                trailing: peerId != null && c.tracks[i].ref != null ? const Icon(Icons.play_arrow_rounded) : null,
               ),
             ),
         ],
       );
     },
   );
+
+  /// Connects to the owner first, so a connection that can't be made says so here instead of failing in the player.
+  Future<void> _play(BuildContext context, List<ShareTrack> tracks, int index) async {
+    final player = PlayerScope.read(context), messenger = ScaffoldMessenger.of(context);
+    final rtc = connectRtcOf(player), id = peerId!;
+    try {
+      await rtc.client(id);
+    } catch (_) {
+      messenger.showSnackBar(SnackBar(content: Text(tr.connectStreamFailed)));
+      return;
+    }
+    final playable = [
+      for (final t in tracks)
+        if (t.ref != null) t,
+    ];
+    await player.playList([for (final t in playable) connectTrackOf(id, t)], playable.indexOf(tracks[index]));
+  }
 
   Future<void> _rename(BuildContext context, ShareCollection copy) async {
     final controller = TextEditingController(text: copy.entry.name);
