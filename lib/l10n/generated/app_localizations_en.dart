@@ -7433,6 +7433,19 @@ class AppLocalizationsEn extends AppLocalizations {
       'Stereo songs fill a 7.1 room around you: the voice stays in front, the space moves to the sides and back. 5.1 / 7.1 songs, Dolby Atmos too, always get each channel in its place.';
 
   @override
+  String get bassManagement => 'Bass management';
+
+  @override
+  String get bassManagementSubtitle =>
+      'Sends the bass below the crossover to the subwoofer and the rest to the main speakers. Needs an output with a subwoofer channel (2.1 or more); stereo songs only.';
+
+  @override
+  String get bassCrossover => 'Crossover frequency';
+
+  @override
+  String get bassCrossoverBody => 'Below this, the sound goes to the subwoofer. 80 Hz is the usual choice.';
+
+  @override
   String get passthrough => 'Dolby Atmos';
 
   @override

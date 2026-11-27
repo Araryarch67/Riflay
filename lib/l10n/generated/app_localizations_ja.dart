@@ -7197,6 +7197,18 @@ class AppLocalizationsJa extends AppLocalizations {
       'ステレオの曲が周りの7.1の部屋に広がる：ボーカルは前のまま、空間の響きが横と後ろへ。5.1 / 7.1の曲(Dolby Atmosも)はいつもチャンネルごとの位置で鳴る。';
 
   @override
+  String get bassManagement => 'バスマネージメント';
+
+  @override
+  String get bassManagementSubtitle => 'クロスオーバーより下の低音をサブウーファーへ、残りをメインスピーカーへ送る。サブウーファーのチャンネルがある出力(2.1以上)が必要。ステレオの曲のみ。';
+
+  @override
+  String get bassCrossover => 'クロスオーバー周波数';
+
+  @override
+  String get bassCrossoverBody => 'これより下の音はサブウーファーへ送られる。80 Hzが一般的。';
+
+  @override
   String get passthrough => 'Dolby Atmos';
 
   @override

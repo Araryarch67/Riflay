@@ -221,6 +221,24 @@ class DspSettings extends StatelessWidget {
                     value: audio.surroundUpmix && speakersOn,
                     onChanged: locked || monoOn ? null : audio.setSurroundUpmix,
                   ),
+                SwitchListTile(
+                  secondary: const Icon(Icons.speaker_rounded),
+                  title: Text(tr.bassManagement),
+                  subtitle: Text(lockedNote(tr.bassManagementSubtitle), style: muted),
+                  value: audio.bassManagement && !locked,
+                  onChanged: locked ? null : audio.setBassManagement,
+                ),
+                if (audio.bassManagement)
+                  _DspSlider(
+                    title: tr.bassCrossover,
+                    description: tr.bassCrossoverBody,
+                    value: audio.bassCrossover,
+                    min: AudioEngine.minBassCrossover,
+                    max: AudioEngine.maxBassCrossover,
+                    defaultValue: AudioEngine.defaultBassCrossover,
+                    label: '${audio.bassCrossover.round()} Hz',
+                    onChanged: locked ? null : audio.setBassCrossover,
+                  ),
               ],
               SettingTile(
                 icon: Icons.headphones_rounded,
