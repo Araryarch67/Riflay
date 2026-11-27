@@ -2362,5 +2362,15 @@
   "karaokeFailed": "この曲を分離できませんでした。",
   "karaokeUnavailable": "カラオケは iPhone と iPad ではまだ使えません。",
   "karaokeVocals": "ボーカル",
-  "karaokeMusic": "伴奏"
+  "karaokeMusic": "伴奏",
+  "audiobook": "オーディオブック / ポッドキャスト",
+  "audiobookOn": "位置と速度を記憶",
+  "audiobookHint": "止めた場所から、この本に設定した速度で再開します。",
+  "audiobookSpeed": "この本の速度",
+  "audiobookBack": "15秒戻る",
+  "audiobookForward": "30秒進む",
+  "bookmarks": "ブックマーク",
+  "bookmarkAdd": "ここにブックマーク",
+  "bookmarkNote": "メモ（任意）",
+  "bookmarksEmpty": "ブックマークはまだありません。"
 }

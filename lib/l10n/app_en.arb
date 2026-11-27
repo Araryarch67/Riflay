@@ -4073,5 +4073,15 @@
   "karaokeFailed": "Couldn't separate this song.",
   "karaokeUnavailable": "Karaoke isn't available on iPhone and iPad yet.",
   "karaokeVocals": "Vocals",
-  "karaokeMusic": "Music"
+  "karaokeMusic": "Music",
+  "audiobook": "Audiobook / podcast",
+  "audiobookOn": "Remember place and speed",
+  "audiobookHint": "Picks up where you stopped, at the speed you set for this book.",
+  "audiobookSpeed": "Speed for this book",
+  "audiobookBack": "Back 15 s",
+  "audiobookForward": "Forward 30 s",
+  "bookmarks": "Bookmarks",
+  "bookmarkAdd": "Bookmark here",
+  "bookmarkNote": "Note (optional)",
+  "bookmarksEmpty": "No bookmarks yet."
 }

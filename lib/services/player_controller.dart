@@ -42,6 +42,7 @@ import 'download_files.dart' show nameDownload;
 import 'mv_sidecar.dart';
 import 'sacd.dart';
 import 'sleep_timer.dart';
+import 'spoken_word.dart';
 import 'karaoke.dart';
 import 'pcm_decoder.dart';
 import 'soundcloud.dart';
@@ -139,6 +140,7 @@ class PlayerController extends ChangeNotifier {
           )
           .listen((_) {
             _saveQueue();
+            _followBook();
             if (_restoringQueue) {
               notifyListeners();
               return;
@@ -186,6 +188,7 @@ class PlayerController extends ChangeNotifier {
     // Plays count towards the YouTube Music history (signed in, setting on).
     _subs.add(ytMusic.reportPlaysOf(player, secondTicks(), () => currentTrack));
     _subs.add(secondTicks().listen(_endPreview));
+    _subs.add(secondTicks().listen(_saveBookPosition));
     // Lets a song's music-video formats be looked up ahead with its audio ones.
     YoutubeStream.musicVideoIdLookup = (id) async => (await ytMusic.musicVideo(id))?.videoId;
     YtDlp.accountCookies = () => ytMusic.downloadCookies;
@@ -1104,8 +1107,14 @@ class PlayerController extends ChangeNotifier {
   }
 
   Future<void> seekByStep({required bool forward}) async {
-    if (_seekStepSeconds == 0 || currentTrack == null) return;
-    final target = position + Duration(seconds: forward ? _seekStepSeconds : -_seekStepSeconds);
+    if (_seekStepSeconds == 0) return;
+    await seekBy(Duration(seconds: forward ? _seekStepSeconds : -_seekStepSeconds));
+  }
+
+  /// Moves [delta] from where the song is, kept inside the song.
+  Future<void> seekBy(Duration delta) async {
+    if (currentTrack == null) return;
+    final target = position + delta;
     final end = duration;
     await seek(
       target.isNegative
@@ -1114,6 +1123,42 @@ class PlayerController extends ChangeNotifier {
           ? end
           : target,
     );
+  }
+
+  /// The book playing (see [SpokenWord]), null for music. Leaving one gives the tempo music had back.
+  String? _bookId;
+  double? _musicTempo;
+
+  /// True from a book's start until its saved place is reached: the first positions must not overwrite it.
+  bool _resumingBook = false;
+
+  void _followBook() {
+    final spoken = SpokenWord.instance;
+    final track = currentTrack;
+    final id = track != null && spoken.isBook(track.id) ? track.id : null;
+    if (id == _bookId) return;
+    if (_bookId != null) unawaited(spoken.flush());
+    _bookId = id;
+    if (id == null) {
+      final back = _musicTempo;
+      _musicTempo = null;
+      if (back != null) unawaited(audio.setTempo(back));
+      return;
+    }
+    _musicTempo ??= audio.tempo;
+    unawaited(audio.setTempo(spoken.tempoOf(id)));
+    final at = spoken.resumeAt(id);
+    // A queue restored at launch already brings its own position back.
+    if (at == null || _restoringQueue) return;
+    _resumingBook = true;
+    seek(at).whenComplete(() => _resumingBook = false).ignore();
+  }
+
+  /// Keeps the playing book's place: in memory every second, on disk every fifth.
+  void _saveBookPosition(Duration at) {
+    final id = _bookId;
+    if (id == null || _resumingBook || !player.playing || casting) return;
+    unawaited(SpokenWord.instance.savePosition(id, at, duration, persist: at.inSeconds % 5 == 0));
   }
 
   Future<void> seek(Duration to) async {
@@ -1893,7 +1938,14 @@ class PlayerController extends ChangeNotifier {
     final library = LibraryStore.load(prefs);
     // iOS: picked folders have to be reopened before any of their songs can be read.
     final folders = Host.isIOS ? IosFolders.restore() : Future.value(const <String, String>{});
-    await Future.wait([library, folders, ytMusic.load(), audio.load(), PlaylistCovers.instance.load()]);
+    await Future.wait([
+      library,
+      folders,
+      ytMusic.load(),
+      audio.load(),
+      PlaylistCovers.instance.load(),
+      SpokenWord.instance.load(prefs),
+    ]);
     // A downloads folder picked in Files is one of them.
     if (Host.isIOS) await DownloadPrefs.instance.repointFolder(await folders);
     _followTempo(); // a tempo or pitch kept from last time
@@ -2788,6 +2840,7 @@ class PlayerController extends ChangeNotifier {
 
   /// Tempo & pitch: the player's speed follows them (the engine sets the filter and the pitch correction).
   void _followTempo() {
+    if (_bookId case final id?) unawaited(SpokenWord.instance.setTempo(id, audio.tempo));
     final speed = audio.mpvSpeed;
     if ((player.speed - speed).abs() > 1e-6) unawaited(player.setSpeed(speed));
   }
@@ -3632,6 +3685,7 @@ class PlayerController extends ChangeNotifier {
     _stall?.cancel();
     recentRadios.dispose();
     _writeQueue();
+    unawaited(SpokenWord.instance.flush());
     _queueLifecycle?.dispose();
     _disposed = true;
     _cancelPlaybackRetry();

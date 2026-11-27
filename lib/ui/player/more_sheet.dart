@@ -17,7 +17,9 @@ import '../shell_scope.dart';
 import '../theme.dart';
 import '../widgets/controls.dart';
 import '../widgets/signal_path.dart';
+import '../widgets/audiobook_sheet.dart';
 import '../widgets/karaoke_sheet.dart';
+import '../../services/spoken_word.dart';
 import '../widgets/sleep_timer_button.dart';
 import '../widgets/stats_for_nerds.dart';
 import '../widgets/track_row.dart';
@@ -291,6 +293,15 @@ class PlayerMoreSheet extends StatelessWidget {
                       subtitle: changed ? tempoPitchLabel(a) : null,
                     );
                   },
+                ),
+                ListenableBuilder(
+                  listenable: SpokenWord.instance,
+                  builder: (_, _) => tile(
+                    Icons.menu_book_rounded,
+                    tr.audiobook,
+                    then(showAudiobook),
+                    on: SpokenWord.instance.isBook(track.id),
+                  ),
                 ),
                 tile(Icons.query_stats_rounded, tr.detailStats, then(showDetailStats)),
               ]),
