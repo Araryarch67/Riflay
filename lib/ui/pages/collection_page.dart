@@ -255,6 +255,13 @@ class _CollectionPageState extends State<CollectionPage> {
           onPressed: _toggleSearch,
           icon: Icon(_searching ? Icons.close_rounded : Icons.search_rounded),
         ),
+      // A poster of these songs (all songs, liked, a playlist, a mix…): picked from this list.
+      if (tracks.isNotEmpty)
+        IconButton(
+          tooltip: tr.makePoster,
+          onPressed: () => showPosterFromList(context, tracks),
+          icon: const Icon(Icons.photo_library_outlined),
+        ),
       if (playlistId != null) _PlaylistMenu(id: playlistId, name: live.title, tracks: tracks),
 
       if (live.kind == CollectionKind.folder && live.id != null) _FolderPlaylistMenu(path: live.id!),
@@ -355,13 +362,6 @@ class _CollectionPageState extends State<CollectionPage> {
                         },
                       ),
                       ...actions,
-                      // A poster of this playlist, mix or album: its first songs on it, the rest to add from.
-                      if (tracks.isNotEmpty)
-                        IconButton(
-                          tooltip: tr.makePoster,
-                          onPressed: () => showPosterEditor(context, songs: tracks.take(4).toList(), pool: tracks),
-                          icon: const Icon(Icons.photo_library_outlined),
-                        ),
                       // An artist (yours, or a YouTube Music one with Follow): all of their songs into a playlist.
                       if (!addAll && isArtistPage && tracks.isNotEmpty)
                         IconButton(

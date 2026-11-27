@@ -2344,7 +2344,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get posterDark => 'Dark';
 
   @override
-  String get posterGlass => 'Glass';
+  String get posterGlass => 'Frosted glass';
 
   @override
   String get posterCoverColour => 'Cover colour';
@@ -2381,6 +2381,110 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get posterCaption => 'My songs, on Riflay';
+
+  @override
+  String get posterDecor => 'Decor';
+
+  @override
+  String get posterStepDecor => 'Tap to add one. On the poster, drag it, pinch to size it, turn it with two fingers.';
+
+  @override
+  String get posterDecoration => 'Decoration';
+
+  @override
+  String get posterAddText => 'Add text';
+
+  @override
+  String get posterEditText => 'Edit text';
+
+  @override
+  String get posterTextHint => 'Your words';
+
+  @override
+  String get posterColour => 'Colour';
+
+  @override
+  String get posterInFront => 'Put in front of you';
+
+  @override
+  String get posterBehind => 'Put behind you';
+
+  @override
+  String get posterCutoutModel => 'Cut-out';
+
+  @override
+  String get posterModelBuiltIn => 'Built-in';
+
+  @override
+  String get posterModelBuiltInHint => 'Small and quick, on the device from the start.';
+
+  @override
+  String get posterModelModnetHint => 'Made for people: finer hair and edges.';
+
+  @override
+  String get posterModelRmbgHint => 'BRIA\'s RMBG: the sharpest edges. Non-commercial use only.';
+
+  @override
+  String posterModelDownloadTitle(String name) {
+    return 'Download $name?';
+  }
+
+  @override
+  String posterModelDownloadBody(int size) {
+    return 'About $size MB, downloaded once and kept on this device. Your photos never leave it.';
+  }
+
+  @override
+  String get posterModelRmbgLicence =>
+      'RMBG-1.4 is BRIA\'s model, licensed for non-commercial use only. By downloading it you accept its licence.';
+
+  @override
+  String get posterReadLicence => 'Read the licence';
+
+  @override
+  String get posterDownload => 'Download';
+
+  @override
+  String get posterAcceptDownload => 'Accept and download';
+
+  @override
+  String posterModelDownloading(String name) {
+    return 'Downloading $name…';
+  }
+
+  @override
+  String get posterModelFailed => 'Couldn\'t download the model. Try again.';
+
+  @override
+  String posterPickAtLeast(int count) {
+    return 'Pick at least $count songs';
+  }
+
+  @override
+  String posterPickSongs(int count, int max) {
+    return 'Pick songs ($count/$max)';
+  }
+
+  @override
+  String get posterReplaceSong => 'Change song';
+
+  @override
+  String get posterSectionImage => 'Image';
+
+  @override
+  String get posterSectionLight => 'Light';
+
+  @override
+  String get posterSectionColor => 'Color';
+
+  @override
+  String get posterSectionEffects => 'Effects';
+
+  @override
+  String get posterSectionTransform => 'Transform';
+
+  @override
+  String get posterSectionCard => 'Card';
 
   @override
   String get posterWatermarkHint => 'The Riflay mark at the foot of the poster';

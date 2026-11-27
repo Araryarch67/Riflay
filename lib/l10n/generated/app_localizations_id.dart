@@ -2338,7 +2338,7 @@ class AppLocalizationsId extends AppLocalizations {
   String get posterDark => 'Gelap';
 
   @override
-  String get posterGlass => 'Kaca';
+  String get posterGlass => 'Kaca buram';
 
   @override
   String get posterCoverColour => 'Warna cover';
@@ -2376,6 +2376,111 @@ class AppLocalizationsId extends AppLocalizations {
 
   @override
   String get posterCaption => 'Lagu-laguku, di Riflay';
+
+  @override
+  String get posterDecor => 'Hiasan';
+
+  @override
+  String get posterStepDecor =>
+      'Ketuk untuk menambah. Di poster, geser, cubit untuk mengubah ukuran, putar dengan dua jari.';
+
+  @override
+  String get posterDecoration => 'Hiasan';
+
+  @override
+  String get posterAddText => 'Tambah teks';
+
+  @override
+  String get posterEditText => 'Ubah teks';
+
+  @override
+  String get posterTextHint => 'Kata-katamu';
+
+  @override
+  String get posterColour => 'Warna';
+
+  @override
+  String get posterInFront => 'Taruh di depanmu';
+
+  @override
+  String get posterBehind => 'Taruh di belakangmu';
+
+  @override
+  String get posterCutoutModel => 'Pemotong';
+
+  @override
+  String get posterModelBuiltIn => 'Bawaan';
+
+  @override
+  String get posterModelBuiltInHint => 'Kecil dan cepat, sudah ada di perangkat.';
+
+  @override
+  String get posterModelModnetHint => 'Khusus orang: rambut dan tepi lebih halus.';
+
+  @override
+  String get posterModelRmbgHint => 'RMBG dari BRIA: tepi paling tajam. Hanya untuk pemakaian non-komersial.';
+
+  @override
+  String posterModelDownloadTitle(String name) {
+    return 'Unduh $name?';
+  }
+
+  @override
+  String posterModelDownloadBody(int size) {
+    return 'Sekitar $size MB, diunduh sekali dan disimpan di perangkat ini. Fotomu tidak pernah keluar dari perangkat.';
+  }
+
+  @override
+  String get posterModelRmbgLicence =>
+      'RMBG-1.4 adalah model milik BRIA dengan lisensi khusus pemakaian non-komersial. Dengan mengunduhnya, kamu menyetujui lisensinya.';
+
+  @override
+  String get posterReadLicence => 'Baca lisensi';
+
+  @override
+  String get posterDownload => 'Unduh';
+
+  @override
+  String get posterAcceptDownload => 'Setuju dan unduh';
+
+  @override
+  String posterModelDownloading(String name) {
+    return 'Mengunduh $name…';
+  }
+
+  @override
+  String get posterModelFailed => 'Model gagal diunduh. Coba lagi.';
+
+  @override
+  String posterPickAtLeast(int count) {
+    return 'Pilih minimal $count lagu';
+  }
+
+  @override
+  String posterPickSongs(int count, int max) {
+    return 'Pilih lagu ($count/$max)';
+  }
+
+  @override
+  String get posterReplaceSong => 'Ganti lagu';
+
+  @override
+  String get posterSectionImage => 'Gambar';
+
+  @override
+  String get posterSectionLight => 'Cahaya';
+
+  @override
+  String get posterSectionColor => 'Warna';
+
+  @override
+  String get posterSectionEffects => 'Efek';
+
+  @override
+  String get posterSectionTransform => 'Transformasi';
+
+  @override
+  String get posterSectionCard => 'Kartu';
 
   @override
   String get posterWatermarkHint => 'Tanda Riflay di bagian bawah poster';

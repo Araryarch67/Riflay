@@ -2290,7 +2290,7 @@ class AppLocalizationsJa extends AppLocalizations {
   String get posterDark => 'ダーク';
 
   @override
-  String get posterGlass => 'ガラス';
+  String get posterGlass => 'すりガラス';
 
   @override
   String get posterCoverColour => 'カバーの色';
@@ -2327,6 +2327,109 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get posterCaption => '私の曲、Riflay で';
+
+  @override
+  String get posterDecor => 'デコ';
+
+  @override
+  String get posterStepDecor => 'タップで追加。ポスター上でドラッグ、ピンチでサイズ変更、2本指で回転できます。';
+
+  @override
+  String get posterDecoration => 'デコ';
+
+  @override
+  String get posterAddText => 'テキストを追加';
+
+  @override
+  String get posterEditText => 'テキストを編集';
+
+  @override
+  String get posterTextHint => 'あなたの言葉';
+
+  @override
+  String get posterColour => '色';
+
+  @override
+  String get posterInFront => 'あなたの前に置く';
+
+  @override
+  String get posterBehind => 'あなたの後ろに置く';
+
+  @override
+  String get posterCutoutModel => '切り抜き';
+
+  @override
+  String get posterModelBuiltIn => '標準';
+
+  @override
+  String get posterModelBuiltInHint => '小さく高速。最初から端末に入っています。';
+
+  @override
+  String get posterModelModnetHint => '人物向け：髪や輪郭がよりきれいに。';
+
+  @override
+  String get posterModelRmbgHint => 'BRIA の RMBG：最もシャープな輪郭。非商用利用のみ。';
+
+  @override
+  String posterModelDownloadTitle(String name) {
+    return '$name をダウンロードしますか？';
+  }
+
+  @override
+  String posterModelDownloadBody(int size) {
+    return '約 $size MB。一度だけダウンロードして端末に保存します。写真が端末の外に出ることはありません。';
+  }
+
+  @override
+  String get posterModelRmbgLicence => 'RMBG-1.4 は BRIA のモデルで、非商用利用に限りライセンスされています。ダウンロードするとそのライセンスに同意したことになります。';
+
+  @override
+  String get posterReadLicence => 'ライセンスを読む';
+
+  @override
+  String get posterDownload => 'ダウンロード';
+
+  @override
+  String get posterAcceptDownload => '同意してダウンロード';
+
+  @override
+  String posterModelDownloading(String name) {
+    return '$name をダウンロード中…';
+  }
+
+  @override
+  String get posterModelFailed => 'モデルをダウンロードできませんでした。もう一度お試しください。';
+
+  @override
+  String posterPickAtLeast(int count) {
+    return '$count 曲以上選んでください';
+  }
+
+  @override
+  String posterPickSongs(int count, int max) {
+    return '曲を選ぶ ($count/$max)';
+  }
+
+  @override
+  String get posterReplaceSong => '曲を変更';
+
+  @override
+  String get posterSectionImage => '画像';
+
+  @override
+  String get posterSectionLight => 'ライト';
+
+  @override
+  String get posterSectionColor => 'カラー';
+
+  @override
+  String get posterSectionEffects => '効果';
+
+  @override
+  String get posterSectionTransform => '変形';
+
+  @override
+  String get posterSectionCard => 'カード';
 
   @override
   String get posterWatermarkHint => 'ポスター下部の Riflay マーク';

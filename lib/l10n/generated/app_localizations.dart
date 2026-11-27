@@ -4380,7 +4380,7 @@ abstract class AppLocalizations {
   /// No description provided for @posterGlass.
   ///
   /// In en, this message translates to:
-  /// **'Glass'**
+  /// **'Frosted glass'**
   String get posterGlass;
 
   /// No description provided for @posterCoverColour.
@@ -4454,6 +4454,192 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'My songs, on Riflay'**
   String get posterCaption;
+
+  /// No description provided for @posterDecor.
+  ///
+  /// In en, this message translates to:
+  /// **'Decor'**
+  String get posterDecor;
+
+  /// No description provided for @posterStepDecor.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap to add one. On the poster, drag it, pinch to size it, turn it with two fingers.'**
+  String get posterStepDecor;
+
+  /// No description provided for @posterDecoration.
+  ///
+  /// In en, this message translates to:
+  /// **'Decoration'**
+  String get posterDecoration;
+
+  /// No description provided for @posterAddText.
+  ///
+  /// In en, this message translates to:
+  /// **'Add text'**
+  String get posterAddText;
+
+  /// No description provided for @posterEditText.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit text'**
+  String get posterEditText;
+
+  /// No description provided for @posterTextHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Your words'**
+  String get posterTextHint;
+
+  /// No description provided for @posterColour.
+  ///
+  /// In en, this message translates to:
+  /// **'Colour'**
+  String get posterColour;
+
+  /// No description provided for @posterInFront.
+  ///
+  /// In en, this message translates to:
+  /// **'Put in front of you'**
+  String get posterInFront;
+
+  /// No description provided for @posterBehind.
+  ///
+  /// In en, this message translates to:
+  /// **'Put behind you'**
+  String get posterBehind;
+
+  /// No description provided for @posterCutoutModel.
+  ///
+  /// In en, this message translates to:
+  /// **'Cut-out'**
+  String get posterCutoutModel;
+
+  /// No description provided for @posterModelBuiltIn.
+  ///
+  /// In en, this message translates to:
+  /// **'Built-in'**
+  String get posterModelBuiltIn;
+
+  /// No description provided for @posterModelBuiltInHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Small and quick, on the device from the start.'**
+  String get posterModelBuiltInHint;
+
+  /// No description provided for @posterModelModnetHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Made for people: finer hair and edges.'**
+  String get posterModelModnetHint;
+
+  /// No description provided for @posterModelRmbgHint.
+  ///
+  /// In en, this message translates to:
+  /// **'BRIA\'s RMBG: the sharpest edges. Non-commercial use only.'**
+  String get posterModelRmbgHint;
+
+  /// No description provided for @posterModelDownloadTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Download {name}?'**
+  String posterModelDownloadTitle(String name);
+
+  /// No description provided for @posterModelDownloadBody.
+  ///
+  /// In en, this message translates to:
+  /// **'About {size} MB, downloaded once and kept on this device. Your photos never leave it.'**
+  String posterModelDownloadBody(int size);
+
+  /// No description provided for @posterModelRmbgLicence.
+  ///
+  /// In en, this message translates to:
+  /// **'RMBG-1.4 is BRIA\'s model, licensed for non-commercial use only. By downloading it you accept its licence.'**
+  String get posterModelRmbgLicence;
+
+  /// No description provided for @posterReadLicence.
+  ///
+  /// In en, this message translates to:
+  /// **'Read the licence'**
+  String get posterReadLicence;
+
+  /// No description provided for @posterDownload.
+  ///
+  /// In en, this message translates to:
+  /// **'Download'**
+  String get posterDownload;
+
+  /// No description provided for @posterAcceptDownload.
+  ///
+  /// In en, this message translates to:
+  /// **'Accept and download'**
+  String get posterAcceptDownload;
+
+  /// No description provided for @posterModelDownloading.
+  ///
+  /// In en, this message translates to:
+  /// **'Downloading {name}…'**
+  String posterModelDownloading(String name);
+
+  /// No description provided for @posterModelFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t download the model. Try again.'**
+  String get posterModelFailed;
+
+  /// No description provided for @posterPickAtLeast.
+  ///
+  /// In en, this message translates to:
+  /// **'Pick at least {count} songs'**
+  String posterPickAtLeast(int count);
+
+  /// No description provided for @posterPickSongs.
+  ///
+  /// In en, this message translates to:
+  /// **'Pick songs ({count}/{max})'**
+  String posterPickSongs(int count, int max);
+
+  /// No description provided for @posterReplaceSong.
+  ///
+  /// In en, this message translates to:
+  /// **'Change song'**
+  String get posterReplaceSong;
+
+  /// No description provided for @posterSectionImage.
+  ///
+  /// In en, this message translates to:
+  /// **'Image'**
+  String get posterSectionImage;
+
+  /// No description provided for @posterSectionLight.
+  ///
+  /// In en, this message translates to:
+  /// **'Light'**
+  String get posterSectionLight;
+
+  /// No description provided for @posterSectionColor.
+  ///
+  /// In en, this message translates to:
+  /// **'Color'**
+  String get posterSectionColor;
+
+  /// No description provided for @posterSectionEffects.
+  ///
+  /// In en, this message translates to:
+  /// **'Effects'**
+  String get posterSectionEffects;
+
+  /// No description provided for @posterSectionTransform.
+  ///
+  /// In en, this message translates to:
+  /// **'Transform'**
+  String get posterSectionTransform;
+
+  /// No description provided for @posterSectionCard.
+  ///
+  /// In en, this message translates to:
+  /// **'Card'**
+  String get posterSectionCard;
 
   /// No description provided for @posterWatermarkHint.
   ///
