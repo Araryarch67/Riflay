@@ -15,4 +15,6 @@ Pod::Spec.new do |s|
   s.source           = { :path => '.' }
   s.platform         = :ios, '15.0'
   s.static_framework = true
+  # CocoaPods refuses a spec with nothing in it.
+  s.preserve_paths   = 'README.md'
 end
