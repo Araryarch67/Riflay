@@ -5826,6 +5826,17 @@ class AppLocalizationsJa extends AppLocalizations {
   }
 
   @override
+  String get multiroom => '複数のデバイスで再生';
+
+  @override
+  String multiroomPlayOn(int count) {
+    return '$count 台で再生';
+  }
+
+  @override
+  String get multiroomNote => '2 台以上を選ぶ。それぞれ別に再生が始まるため、部屋ごとに少しずれて聞こえることがある。';
+
+  @override
   String get presetClassicNote => 'いつものプレイヤー。ジャケットが音楽に合わせて脈打つ';
 
   @override

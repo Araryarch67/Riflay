@@ -6020,6 +6020,18 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get multiroom => 'Play on several devices';
+
+  @override
+  String multiroomPlayOn(int count) {
+    return 'Play on $count devices';
+  }
+
+  @override
+  String get multiroomNote =>
+      'Pick two or more devices. They start on their own, so rooms can sound slightly out of step.';
+
+  @override
   String get presetClassicNote => 'The player as it has always been, the cover pulsing with the music';
 
   @override

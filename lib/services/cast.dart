@@ -78,6 +78,21 @@ class AirPlayTarget extends CastTarget {
   bool get hasVolume => true;
 }
 
+/// Which devices play together as one destination. Pure, so it is testable
+/// without a network.
+abstract final class CastGroup {
+  /// [group] with [t] added at the end, or removed if it was in. The first
+  /// device is the one whose position and end of song the app follows.
+  static List<CastTarget> toggle(List<CastTarget> group, CastTarget t) =>
+      group.contains(t) ? [...group.where((g) => g != t)] : [...group, t];
+
+  /// Whether both name the same devices, whatever the order.
+  static bool same(Iterable<CastTarget> a, Iterable<CastTarget> b) {
+    final x = a.toSet(), y = b.toSet();
+    return x.length == y.length && x.containsAll(y);
+  }
+}
+
 /// Plays songs on a TV or speaker and follows what it does.
 ///
 /// DLNA renderers play on their own and send no events we could rely on, so
@@ -168,6 +183,55 @@ class Cast extends ChangeNotifier {
   };
   bool get active => _control != null || _airplay != null;
 
+  // Multiroom: every device after the first is its own single-device [Cast]
+  // that is sent the same song and the same commands. Only the first one's
+  // position, pause and end of song are followed.
+  //
+  // shortcut: no clock sync. Each device buffers and starts on its own, and
+  // DLNA TVs and AirPlay speakers differ by tens to hundreds of ms (more over
+  // Wi-Fi), so rooms can echo. Upgrade when the cast layer has a shared start
+  // time (e.g. a delay per device, measured or set by the user).
+  final _followers = <Cast>[];
+
+  /// Everything the song is sent to, the first being the one followed.
+  List<CastTarget> get group => [?target, for (final f in _followers) ?f.target];
+
+  /// Sends to all of [devices] at once. Throws like [connect] when the first
+  /// can't be reached; one of the others failing is only reported with
+  /// [onError] and the rest carry on.
+  Future<void> connectGroup(List<CastTarget> devices) async {
+    if (devices.isEmpty || CastGroup.same(group, devices)) return;
+    await disconnect();
+    await connect(devices.first);
+    for (final d in devices.skip(1)) {
+      late final Cast f;
+      f = Cast(
+        onEnded: () {},
+        pollEvery: pollEvery,
+        airPlay: airPlay,
+        onError: (m) {
+          _followers.remove(f);
+          notifyListeners();
+          onError(m);
+        },
+      );
+      try {
+        await f.connect(d);
+        _followers.add(f);
+      } catch (e) {
+        f.dispose();
+        onError(tr.couldntReachDevice(d.name));
+      }
+    }
+    notifyListeners();
+  }
+
+  void _others(Future<void> Function(Cast f) action) {
+    for (final f in _followers) {
+      action(f).ignore();
+    }
+  }
+
   /// Starts sending to [device]. Throws [DlnaException] (or a network
   /// error) when it can't be reached.
   Future<void> connect(CastTarget device, {DlnaControl? control}) async {
@@ -229,6 +293,9 @@ class Cast extends ChangeNotifier {
 
   /// Back to this device; [stopRenderer] also stops the music over there.
   Future<void> disconnect({bool stopRenderer = true}) async {
+    final others = [..._followers];
+    _followers.clear();
+    await Future.wait([for (final f in others) f.disconnect(stopRenderer: stopRenderer).whenComplete(f.dispose)]);
     if (_airplay case final a?) {
       _airplay = null;
       _item = null;
@@ -305,6 +372,7 @@ class Cast extends ChangeNotifier {
 
   /// Sends [item] to the renderer and starts it at [from] if [play].
   Future<void> load(CastItem item, {Duration from = Duration.zero, bool play = true}) async {
+    _others((f) => f.load(item, from: from, play: play));
     if (_airplay case final a?) {
       _item = item;
       notifyListeners();
@@ -400,6 +468,7 @@ class Cast extends ChangeNotifier {
   };
 
   Future<void> play() async {
+    _others((f) => f.play());
     if (_airplay case final a?) {
       await a.play();
       return notifyListeners();
@@ -413,6 +482,7 @@ class Cast extends ChangeNotifier {
   }
 
   Future<void> pause() async {
+    _others((f) => f.pause());
     if (_airplay case final a?) {
       await a.pause();
       return notifyListeners();
@@ -426,6 +496,7 @@ class Cast extends ChangeNotifier {
   }
 
   Future<void> seek(Duration to) async {
+    _others((f) => f.seek(to));
     if (_airplay case final a?) {
       await a.seek(to);
       return notifyListeners();
@@ -440,6 +511,7 @@ class Cast extends ChangeNotifier {
   }
 
   Future<void> setVolume(int volume) async {
+    _others((f) => f.setVolume(volume));
     if (_airplay case final a?) {
       _volume = volume.clamp(0, 100);
       notifyListeners();
@@ -519,6 +591,9 @@ class Cast extends ChangeNotifier {
 
   @override
   void dispose() {
+    for (final f in _followers) {
+      f.dispose();
+    }
     for (final s in _searches) {
       s.cancel();
     }

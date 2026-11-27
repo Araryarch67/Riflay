@@ -1781,6 +1781,16 @@
   "thisSong": "この曲",
   "addMusicFolder": "音楽フォルダを追加",
   "couldntReachDevice": "{device} に接続できませんでした",
+  "multiroom": "複数のデバイスで再生",
+  "multiroomPlayOn": "{count} 台で再生",
+  "@multiroomPlayOn": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "multiroomNote": "2 台以上を選ぶ。それぞれ別に再生が始まるため、部屋ごとに少しずれて聞こえることがある。",
   "presetClassicNote": "いつものプレイヤー。ジャケットが音楽に合わせて脈打つ",
   "presetStackedNote": "ジャケットがページいっぱいに。まとまったボタン、太いバー、横長の再生ボタン",
   "presetKawaiiNote": "ジャケットがページに溶け込み、シンプルなアイコン、波線、ボタンの奥に音量",

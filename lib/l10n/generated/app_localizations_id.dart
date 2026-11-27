@@ -5965,6 +5965,18 @@ class AppLocalizationsId extends AppLocalizations {
   }
 
   @override
+  String get multiroom => 'Putar di beberapa perangkat';
+
+  @override
+  String multiroomPlayOn(int count) {
+    return 'Putar di $count perangkat';
+  }
+
+  @override
+  String get multiroomNote =>
+      'Pilih dua perangkat atau lebih. Masing-masing mulai sendiri, jadi antar ruangan bisa terdengar sedikit tidak serempak.';
+
+  @override
   String get presetClassicNote => 'Pemutar seperti biasanya, sampul berdenyut mengikuti musik';
 
   @override
