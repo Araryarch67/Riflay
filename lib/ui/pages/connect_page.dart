@@ -9,6 +9,7 @@ import '../../services/connect/connect_controller.dart';
 import '../../services/connect/connect_host.dart';
 import '../../services/connect/connect_channel.dart';
 import '../../services/connect/connect_protocol.dart';
+import '../../services/connect/connect_share.dart';
 import '../../services/language.dart';
 import '../../services/listen_together/protocol.dart' show SharedTrack;
 import '../../services/ui_beat.dart';
@@ -16,16 +17,18 @@ import '../player_scope.dart';
 import '../shell_scope.dart';
 import '../theme.dart';
 import '../widgets/page_scaffold.dart';
+import 'connect_share_page.dart';
 import 'listen_qr.dart';
 import 'sound_settings.dart' show SettingsCard;
 
 /// Riflay Connect: on a computer, allow other devices to control it and pair them; on any device, control a
 /// paired computer. [host] and [controller] are only for tests.
 class ConnectPage extends StatefulWidget {
-  const ConnectPage({super.key, this.host, this.controller, this.canHost});
+  const ConnectPage({super.key, this.host, this.controller, this.canHost, this.share});
 
   final ConnectHost? host;
   final ConnectController? controller;
+  final ConnectShare? share;
 
   /// Whether this device can be the one controlled; [Features.connectHost] when null.
   final bool? canHost;
@@ -37,6 +40,7 @@ class ConnectPage extends StatefulWidget {
 class _ConnectPageState extends State<ConnectPage> {
   ConnectHost? _host;
   late final ConnectController _controller = widget.controller ?? ConnectController.instance;
+  ConnectShare? _share;
 
   @override
   void didChangeDependencies() {
@@ -45,6 +49,8 @@ class _ConnectPageState extends State<ConnectPage> {
       _host = widget.host ?? ConnectHost.of(PlayerScope.read(context));
       unawaited(_host!.load());
     }
+    _share ??= widget.share ?? ConnectShare.of(PlayerScope.read(context));
+    _controller.share ??= _share;
     unawaited(_controller.load());
   }
 
@@ -69,6 +75,25 @@ class _ConnectPageState extends State<ConnectPage> {
                     Text(tr.connectTitle, style: text.headlineMedium?.copyWith(fontWeight: FontWeight.w800)),
                     const SizedBox(height: 8),
                     Text(tr.connectIntro, style: text.bodyMedium?.copyWith(color: AppColors.textSecondary)),
+                    const SizedBox(height: 16),
+                    SettingsCard(
+                      children: [
+                        ListTile(
+                          leading: const Icon(Icons.library_music_rounded),
+                          title: Text(tr.connectShareTitle),
+                          subtitle: Text(tr.connectShareSummary),
+                          trailing: const Icon(Icons.chevron_right_rounded),
+                          onTap: () {
+                            final shell = ShellScope.of(context);
+                            unawaited(
+                              Navigator.of(context).push(
+                                MaterialPageRoute<void>(builder: (_) => shell.wrap(ConnectSharePage(share: _share))),
+                              ),
+                            );
+                          },
+                        ),
+                      ],
+                    ),
                     if (_host != null) ...[const SizedBox(height: 24), _HostSection(host: _host!)],
                     const SizedBox(height: 32),
                     _ControllerSection(controller: _controller),

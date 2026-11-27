@@ -2396,5 +2396,19 @@
   "connectPairDenied": "パソコンで許可されませんでした。",
   "connectRevokedNotice": "この端末はパソコンから削除されました。",
   "notAConnectQr": "この QR コードは Riflay Connect のペアリングコードではありません。",
-  "connectQrHowTo": "もう一方の端末の Riflay で Riflay Connect を開き、「QR コードを読み取る」を選んでください。"
+  "connectQrHowTo": "もう一方の端末の Riflay で Riflay Connect を開き、「QR コードを読み取る」を選んでください。",
+  "connectShareTitle": "共有する音楽",
+  "connectShareSummary": "ペアリングした端末とアルバム、アーティスト、プレイリストを共有",
+  "connectShareIntro": "共有するものを選びます。送られるのは名前、アーティスト、年、曲名だけで、ファイルや保存場所は送られません。相手は見るだけで変更できず、共有はいつでも止められます。両方の端末が接続されている必要があります。",
+  "connectShareByYou": "あなたが共有中",
+  "connectShareWithYou": "あなたに共有中",
+  "connectShareNothingYet": "まだ共有されているものはありません。",
+  "connectShareNoneOnDevice": "共有できるアルバム、アーティスト、プレイリストがこの端末にありません。",
+  "connectShareOffline": "接続されていません。最後に受信した内容を表示しています。",
+  "connectShareLoading": "曲を読み込み中…",
+  "connectShareSaveCopy": "コピーを保存",
+  "connectShareCopies": "あなたのコピー",
+  "connectShareCopiesHint": "コピーは名前の変更や削除ができます。共有した相手の変更には追従しません。",
+  "connectShareReadOnly": "{name} が共有中。見るだけで変更はできません。",
+  "@connectShareReadOnly": {"placeholders": {"name": {"type": "String"}}}
 }

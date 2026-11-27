@@ -7,6 +7,7 @@ import '../listen_together/internet.dart';
 import '../listen_together/protocol.dart' show SharedTrack;
 import 'connect_channel.dart';
 import 'connect_protocol.dart';
+import 'connect_share.dart';
 import 'connect_store.dart';
 
 enum ConnectLinkState { disconnected, connecting, connected }
@@ -56,6 +57,9 @@ class ConnectController extends ChangeNotifier {
 
   /// What this device calls itself when it asks to pair (the OS name and a few characters, never an account).
   final String deviceName;
+
+  /// Sharing collections over the same room; the screen sets it (it needs the player).
+  ConnectShare? share;
 
   ConnectStore? _store;
   var _loaded = false;
@@ -178,6 +182,7 @@ class ConnectController extends ChangeNotifier {
   Future<void> forget(ConnectPeer host) async {
     if (_active?.id == host.id) disconnect();
     _hosts = [..._hosts.where((h) => h.id != host.id)];
+    share?.forget(host.id);
     await _store?.saveHosts(_hosts);
     notifyListeners();
   }
@@ -207,6 +212,7 @@ class ConnectController extends ChangeNotifier {
   }
 
   void _stop() {
+    if (_active case final host?) share?.detach(host.id);
     _retry?.cancel();
     _keepAlive?.cancel();
     _silence?.cancel();
@@ -231,6 +237,7 @@ class ConnectController extends ChangeNotifier {
         sendTopic: keys.toHost,
         receiveTopic: keys.toController,
       );
+      share?.attach(host.id, host.name, channel.send);
       _sub = channel.messages.listen((m) => _onMessage(m, session));
       unawaited(link.down.then((_) => _dropped(session)));
       // Connected means the desktop answered, not that the broker did: until then we don't know it's there.
@@ -250,6 +257,8 @@ class ConnectController extends ChangeNotifier {
 
   void _onMessage(Map<String, dynamic> m, int session) {
     if (session != _session) return;
+    final host = _active;
+    if (host != null && ConnectShare.isShare(m)) return unawaited(share?.handle(host.id, m) ?? Future.value());
     switch (m['t']) {
       case 'state':
         final s = ConnectState.fromJson(m);
@@ -259,10 +268,10 @@ class ConnectController extends ChangeNotifier {
         _attempts = 0;
         _armSilence(session);
         if (_state != ConnectLinkState.connected) _state = ConnectLinkState.connected;
+        if (host != null) share?.heard(host.id);
         notifyListeners();
       case 'revoked':
         // The desktop's owner removed this device: the pairing is over, so don't keep knocking.
-        final host = _active;
         if (host != null) unawaited(forget(host));
     }
   }

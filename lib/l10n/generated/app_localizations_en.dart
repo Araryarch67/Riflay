@@ -8075,4 +8075,47 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get connectQrHowTo => 'In Riflay on the other device, open Riflay Connect and choose Scan QR code.';
+
+  @override
+  String get connectShareTitle => 'Shared music';
+
+  @override
+  String get connectShareSummary => 'Share albums, artists and playlists with a paired device';
+
+  @override
+  String get connectShareIntro =>
+      'Pick what to share. Only names, artists, years and song titles are sent, never files or where they are stored. The other person can look but not change anything, and you can stop sharing at any time. Both devices must be connected.';
+
+  @override
+  String get connectShareByYou => 'Shared by you';
+
+  @override
+  String get connectShareWithYou => 'Shared with you';
+
+  @override
+  String get connectShareNothingYet => 'Nothing is shared with you yet.';
+
+  @override
+  String get connectShareNoneOnDevice => 'There are no albums, artists or playlists on this device to share.';
+
+  @override
+  String get connectShareOffline => 'Not connected. Showing what was received last.';
+
+  @override
+  String get connectShareLoading => 'Loading songs…';
+
+  @override
+  String get connectShareSaveCopy => 'Save a copy';
+
+  @override
+  String get connectShareCopies => 'Your copies';
+
+  @override
+  String get connectShareCopiesHint =>
+      'A copy is yours to rename or remove. It no longer follows the person who shared it.';
+
+  @override
+  String connectShareReadOnly(String name) {
+    return 'Shared by $name. You can look, not change.';
+  }
 }

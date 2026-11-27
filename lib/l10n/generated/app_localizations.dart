@@ -14450,6 +14450,84 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'In Riflay on the other device, open Riflay Connect and choose Scan QR code.'**
   String get connectQrHowTo;
+
+  /// No description provided for @connectShareTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Shared music'**
+  String get connectShareTitle;
+
+  /// No description provided for @connectShareSummary.
+  ///
+  /// In en, this message translates to:
+  /// **'Share albums, artists and playlists with a paired device'**
+  String get connectShareSummary;
+
+  /// No description provided for @connectShareIntro.
+  ///
+  /// In en, this message translates to:
+  /// **'Pick what to share. Only names, artists, years and song titles are sent, never files or where they are stored. The other person can look but not change anything, and you can stop sharing at any time. Both devices must be connected.'**
+  String get connectShareIntro;
+
+  /// No description provided for @connectShareByYou.
+  ///
+  /// In en, this message translates to:
+  /// **'Shared by you'**
+  String get connectShareByYou;
+
+  /// No description provided for @connectShareWithYou.
+  ///
+  /// In en, this message translates to:
+  /// **'Shared with you'**
+  String get connectShareWithYou;
+
+  /// No description provided for @connectShareNothingYet.
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing is shared with you yet.'**
+  String get connectShareNothingYet;
+
+  /// No description provided for @connectShareNoneOnDevice.
+  ///
+  /// In en, this message translates to:
+  /// **'There are no albums, artists or playlists on this device to share.'**
+  String get connectShareNoneOnDevice;
+
+  /// No description provided for @connectShareOffline.
+  ///
+  /// In en, this message translates to:
+  /// **'Not connected. Showing what was received last.'**
+  String get connectShareOffline;
+
+  /// No description provided for @connectShareLoading.
+  ///
+  /// In en, this message translates to:
+  /// **'Loading songs…'**
+  String get connectShareLoading;
+
+  /// No description provided for @connectShareSaveCopy.
+  ///
+  /// In en, this message translates to:
+  /// **'Save a copy'**
+  String get connectShareSaveCopy;
+
+  /// No description provided for @connectShareCopies.
+  ///
+  /// In en, this message translates to:
+  /// **'Your copies'**
+  String get connectShareCopies;
+
+  /// No description provided for @connectShareCopiesHint.
+  ///
+  /// In en, this message translates to:
+  /// **'A copy is yours to rename or remove. It no longer follows the person who shared it.'**
+  String get connectShareCopiesHint;
+
+  /// No description provided for @connectShareReadOnly.
+  ///
+  /// In en, this message translates to:
+  /// **'Shared by {name}. You can look, not change.'**
+  String connectShareReadOnly(String name);
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

@@ -2403,5 +2403,19 @@
   "connectPairDenied": "Komputer tidak mengizinkannya.",
   "connectRevokedNotice": "Perangkat ini dihapus dari komputer.",
   "notAConnectQr": "Kode QR itu bukan kode pairing Riflay Connect.",
-  "connectQrHowTo": "Di Riflay pada perangkat lain, buka Riflay Connect lalu pilih Pindai kode QR."
+  "connectQrHowTo": "Di Riflay pada perangkat lain, buka Riflay Connect lalu pilih Pindai kode QR.",
+  "connectShareTitle": "Musik yang dibagikan",
+  "connectShareSummary": "Bagikan album, artis, dan playlist ke perangkat yang dipasangkan",
+  "connectShareIntro": "Pilih apa yang dibagikan. Yang dikirim hanya nama, artis, tahun, dan judul lagu, tidak pernah file atau lokasinya. Orang lain hanya bisa melihat, tidak bisa mengubah, dan kamu bisa berhenti berbagi kapan saja. Kedua perangkat harus tersambung.",
+  "connectShareByYou": "Kamu bagikan",
+  "connectShareWithYou": "Dibagikan kepadamu",
+  "connectShareNothingYet": "Belum ada yang dibagikan kepadamu.",
+  "connectShareNoneOnDevice": "Tidak ada album, artis, atau playlist di perangkat ini untuk dibagikan.",
+  "connectShareOffline": "Tidak tersambung. Menampilkan data terakhir yang diterima.",
+  "connectShareLoading": "Memuat lagu…",
+  "connectShareSaveCopy": "Simpan salinan",
+  "connectShareCopies": "Salinanmu",
+  "connectShareCopiesHint": "Salinan milikmu: bisa diganti nama atau dihapus. Salinan tidak lagi mengikuti pembagi aslinya.",
+  "connectShareReadOnly": "Dibagikan oleh {name}. Kamu hanya bisa melihat.",
+  "@connectShareReadOnly": {"placeholders": {"name": {"type": "String"}}}
 }

@@ -4107,5 +4107,19 @@
   "connectPairDenied": "The computer didn't allow it.",
   "connectRevokedNotice": "This device was removed from the computer.",
   "notAConnectQr": "That QR code is not a Riflay Connect pairing code.",
-  "connectQrHowTo": "In Riflay on the other device, open Riflay Connect and choose Scan QR code."
+  "connectQrHowTo": "In Riflay on the other device, open Riflay Connect and choose Scan QR code.",
+  "connectShareTitle": "Shared music",
+  "connectShareSummary": "Share albums, artists and playlists with a paired device",
+  "connectShareIntro": "Pick what to share. Only names, artists, years and song titles are sent, never files or where they are stored. The other person can look but not change anything, and you can stop sharing at any time. Both devices must be connected.",
+  "connectShareByYou": "Shared by you",
+  "connectShareWithYou": "Shared with you",
+  "connectShareNothingYet": "Nothing is shared with you yet.",
+  "connectShareNoneOnDevice": "There are no albums, artists or playlists on this device to share.",
+  "connectShareOffline": "Not connected. Showing what was received last.",
+  "connectShareLoading": "Loading songs…",
+  "connectShareSaveCopy": "Save a copy",
+  "connectShareCopies": "Your copies",
+  "connectShareCopiesHint": "A copy is yours to rename or remove. It no longer follows the person who shared it.",
+  "connectShareReadOnly": "Shared by {name}. You can look, not change.",
+  "@connectShareReadOnly": {"placeholders": {"name": {"type": "String"}}}
 }

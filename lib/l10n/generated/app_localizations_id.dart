@@ -8014,4 +8014,47 @@ class AppLocalizationsId extends AppLocalizations {
 
   @override
   String get connectQrHowTo => 'Di Riflay pada perangkat lain, buka Riflay Connect lalu pilih Pindai kode QR.';
+
+  @override
+  String get connectShareTitle => 'Musik yang dibagikan';
+
+  @override
+  String get connectShareSummary => 'Bagikan album, artis, dan playlist ke perangkat yang dipasangkan';
+
+  @override
+  String get connectShareIntro =>
+      'Pilih apa yang dibagikan. Yang dikirim hanya nama, artis, tahun, dan judul lagu, tidak pernah file atau lokasinya. Orang lain hanya bisa melihat, tidak bisa mengubah, dan kamu bisa berhenti berbagi kapan saja. Kedua perangkat harus tersambung.';
+
+  @override
+  String get connectShareByYou => 'Kamu bagikan';
+
+  @override
+  String get connectShareWithYou => 'Dibagikan kepadamu';
+
+  @override
+  String get connectShareNothingYet => 'Belum ada yang dibagikan kepadamu.';
+
+  @override
+  String get connectShareNoneOnDevice => 'Tidak ada album, artis, atau playlist di perangkat ini untuk dibagikan.';
+
+  @override
+  String get connectShareOffline => 'Tidak tersambung. Menampilkan data terakhir yang diterima.';
+
+  @override
+  String get connectShareLoading => 'Memuat lagu…';
+
+  @override
+  String get connectShareSaveCopy => 'Simpan salinan';
+
+  @override
+  String get connectShareCopies => 'Salinanmu';
+
+  @override
+  String get connectShareCopiesHint =>
+      'Salinan milikmu: bisa diganti nama atau dihapus. Salinan tidak lagi mengikuti pembagi aslinya.';
+
+  @override
+  String connectShareReadOnly(String name) {
+    return 'Dibagikan oleh $name. Kamu hanya bisa melihat.';
+  }
 }

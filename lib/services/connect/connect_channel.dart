@@ -249,10 +249,10 @@ Uint8List? bytesOfBase64(Object? text) {
 final _unsafeName = RegExp(r'[\u0000-\u001f\u007f-\u009f\u202a-\u202e\u2066-\u2069]');
 
 /// A name from another device, as plain text to show: no control characters, never long.
-String cleanConnectName(Object? raw, {String fallback = 'Riflay'}) {
+String cleanConnectName(Object? raw, {String fallback = 'Riflay', int max = 32}) {
   final text = (raw is String ? raw : '').replaceAll(_unsafeName, '').trim();
   if (text.isEmpty) return fallback;
-  return text.length <= 32 ? text : text.substring(0, 32);
+  return text.length <= max ? text : text.substring(0, max);
 }
 
 /// `riflay://connect?code=…`: what the pairing QR carries.

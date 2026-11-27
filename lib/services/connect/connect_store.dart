@@ -4,6 +4,7 @@ import 'dart:typed_data';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'connect_channel.dart';
+import 'connect_share.dart';
 
 /// The other end of a pairing, as this device remembers it: on the desktop a controller that may send commands,
 /// on a controller a desktop it can control. [secret] opens the pair room (see [ConnectKeys.paired]).
@@ -70,6 +71,59 @@ class ConnectStore {
 
   List<ConnectPeer> get hosts => _read(_hostsKey);
   Future<void> saveHosts(List<ConnectPeer> peers) => _write(_hostsKey, peers);
+
+  // --- Sharing (stage 2). None of it is a path: ids are hashes, the rest is names and song titles. ---
+
+  static const _sharedKey = 'connect_shared_ids';
+  static const _stampsKey = 'connect_share_stamps';
+  static const _copiesKey = 'connect_share_copies';
+
+  /// Ids of the collections this person chose to share: nothing is shared until picked.
+  List<String> get sharedIds => [
+    for (final id in _list(_sharedKey))
+      if (id is String) id,
+  ];
+  Future<void> saveSharedIds(List<String> ids) => _prefs.setString(_sharedKey, jsonEncode(ids));
+
+  Map<String, ShareStamp> get shareStamps {
+    final raw = _json(_stampsKey);
+    if (raw is! Map) return {};
+    return {
+      for (final e in raw.entries)
+        if (e.key is String &&
+            e.value is List &&
+            (e.value as List).length == 2 &&
+            (e.value as List)[0] is String &&
+            (e.value as List)[1] is int)
+          e.key as String: ShareStamp((e.value as List)[0] as String, (e.value as List)[1] as int),
+    };
+  }
+
+  Future<void> saveShareStamps(Map<String, ShareStamp> stamps) => _prefs.setString(
+    _stampsKey,
+    jsonEncode({
+      for (final e in stamps.entries) e.key: [e.value.digest, e.value.version],
+    }),
+  );
+
+  List<ShareCollection> get shareCopies => [for (final c in _list(_copiesKey)) ?ShareCollection.fromJson(c)];
+  Future<void> saveShareCopies(List<ShareCollection> copies) =>
+      _prefs.setString(_copiesKey, jsonEncode([for (final c in copies) c.toJson()]));
+
+  List<Object?> _list(String key) => switch (_json(key)) {
+    final List<Object?> l => l,
+    _ => const [],
+  };
+
+  Object? _json(String key) {
+    final raw = _prefs.getString(key);
+    if (raw == null) return null;
+    try {
+      return jsonDecode(raw);
+    } catch (_) {
+      return null;
+    }
+  }
 
   List<ConnectPeer> _read(String key) {
     final raw = _prefs.getString(key);

@@ -7828,4 +7828,46 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get connectQrHowTo => 'もう一方の端末の Riflay で Riflay Connect を開き、「QR コードを読み取る」を選んでください。';
+
+  @override
+  String get connectShareTitle => '共有する音楽';
+
+  @override
+  String get connectShareSummary => 'ペアリングした端末とアルバム、アーティスト、プレイリストを共有';
+
+  @override
+  String get connectShareIntro =>
+      '共有するものを選びます。送られるのは名前、アーティスト、年、曲名だけで、ファイルや保存場所は送られません。相手は見るだけで変更できず、共有はいつでも止められます。両方の端末が接続されている必要があります。';
+
+  @override
+  String get connectShareByYou => 'あなたが共有中';
+
+  @override
+  String get connectShareWithYou => 'あなたに共有中';
+
+  @override
+  String get connectShareNothingYet => 'まだ共有されているものはありません。';
+
+  @override
+  String get connectShareNoneOnDevice => '共有できるアルバム、アーティスト、プレイリストがこの端末にありません。';
+
+  @override
+  String get connectShareOffline => '接続されていません。最後に受信した内容を表示しています。';
+
+  @override
+  String get connectShareLoading => '曲を読み込み中…';
+
+  @override
+  String get connectShareSaveCopy => 'コピーを保存';
+
+  @override
+  String get connectShareCopies => 'あなたのコピー';
+
+  @override
+  String get connectShareCopiesHint => 'コピーは名前の変更や削除ができます。共有した相手の変更には追従しません。';
+
+  @override
+  String connectShareReadOnly(String name) {
+    return '$name が共有中。見るだけで変更はできません。';
+  }
 }
