@@ -1,5 +1,6 @@
 import 'dart:math' as math;
 
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 
 import '../../models/track.dart';
@@ -17,6 +18,7 @@ import '../theme.dart';
 import '../widgets/controls.dart';
 import '../widgets/audio_source_picker.dart';
 import '../widgets/menus.dart';
+import '../widgets/karaoke_sheet.dart';
 import '../widgets/sleep_timer_button.dart';
 import '../widgets/stats_for_nerds.dart';
 import '../widgets/track_row.dart';
@@ -529,6 +531,13 @@ class _MoreMenu extends StatelessWidget {
               () => showSleepTimer(context),
               on: sleeping,
             ),
+            if (!kIsWeb)
+              item(
+                Icons.mic_rounded,
+                karaokeStatus(c.karaoke) ?? tr.karaoke,
+                () => showKaraoke(context),
+                on: c.karaoke.enabled,
+              ),
             if (Features.casting)
               item(
                 device == null ? Icons.cast_rounded : Icons.cast_connected_rounded,

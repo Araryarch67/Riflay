@@ -254,7 +254,7 @@ class AudioAnalyzer {
       _re[i] = _fftFrame[(_ring + i) & (_fft - 1)] * _window[i];
       _im[i] = 0;
     }
-    _transform(_re, _im);
+    fft(_re, _im);
     // The spectrogram keeps each frame as [rows] bands (the loudest bin of each), not 2049 bins.
     final column = Float32List(rows);
     const bins = _fft ~/ 2;
@@ -270,7 +270,7 @@ class AudioAnalyzer {
   }
 
   /// In-place radix-2 FFT.
-  static void _transform(Float64List re, Float64List im) {
+  static void fft(Float64List re, Float64List im) {
     final n = re.length;
     for (var i = 1, j = 0; i < n; i++) {
       var bit = n >> 1;

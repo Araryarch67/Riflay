@@ -7840,4 +7840,47 @@ class AppLocalizationsId extends AppLocalizations {
 
   @override
   String get scheduleWhileRunning => 'Berjalan selama Riflay aktif';
+
+  @override
+  String get karaoke => 'Karaoke';
+
+  @override
+  String get karaokeHint =>
+      'Kecilkan atau matikan vokal lagu lalu ikut bernyanyi. Tiap lagu dipisah sekali, di perangkat ini.';
+
+  @override
+  String karaokeDownloadNote(int size) {
+    return 'Menyalakannya mengunduh model pemisah vokal sekali (sekitar $size MB).';
+  }
+
+  @override
+  String karaokeDownloading(int percent) {
+    return 'Mengunduh model pemisah… $percent%';
+  }
+
+  @override
+  String get karaokeReading => 'Membaca lagu…';
+
+  @override
+  String karaokeSeparating(int percent) {
+    return 'Memisahkan vokal… $percent%';
+  }
+
+  @override
+  String get karaokeReady => 'Vokal sudah dipisah. Lain kali lagu ini langsung siap.';
+
+  @override
+  String get karaokeUnsupported => 'Sumber lagu ini tidak bisa dipisah. Coba setelah lagunya diunduh.';
+
+  @override
+  String get karaokeFailed => 'Lagu ini gagal dipisah.';
+
+  @override
+  String get karaokeUnavailable => 'Karaoke belum tersedia di iPhone dan iPad.';
+
+  @override
+  String get karaokeVocals => 'Vokal';
+
+  @override
+  String get karaokeMusic => 'Musik';
 }

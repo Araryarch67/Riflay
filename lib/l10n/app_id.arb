@@ -2349,5 +2349,17 @@
   "autoDownloadLiked": "Unduh otomatis lagu yang disukai",
   "dailySleepTimer": "Timer tidur harian",
   "dailyPlaylistAlarm": "Alarm playlist harian",
-  "scheduleWhileRunning": "Berjalan selama Riflay aktif"
+  "scheduleWhileRunning": "Berjalan selama Riflay aktif",
+  "karaoke": "Karaoke",
+  "karaokeHint": "Kecilkan atau matikan vokal lagu lalu ikut bernyanyi. Tiap lagu dipisah sekali, di perangkat ini.",
+  "karaokeDownloadNote": "Menyalakannya mengunduh model pemisah vokal sekali (sekitar {size} MB).",
+  "karaokeDownloading": "Mengunduh model pemisah… {percent}%",
+  "karaokeReading": "Membaca lagu…",
+  "karaokeSeparating": "Memisahkan vokal… {percent}%",
+  "karaokeReady": "Vokal sudah dipisah. Lain kali lagu ini langsung siap.",
+  "karaokeUnsupported": "Sumber lagu ini tidak bisa dipisah. Coba setelah lagunya diunduh.",
+  "karaokeFailed": "Lagu ini gagal dipisah.",
+  "karaokeUnavailable": "Karaoke belum tersedia di iPhone dan iPad.",
+  "karaokeVocals": "Vokal",
+  "karaokeMusic": "Musik"
 }

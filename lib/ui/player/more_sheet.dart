@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 
 import '../../services/language.dart';
@@ -16,6 +17,7 @@ import '../shell_scope.dart';
 import '../theme.dart';
 import '../widgets/controls.dart';
 import '../widgets/signal_path.dart';
+import '../widgets/karaoke_sheet.dart';
 import '../widgets/sleep_timer_button.dart';
 import '../widgets/stats_for_nerds.dart';
 import '../widgets/track_row.dart';
@@ -240,6 +242,17 @@ class PlayerMoreSheet extends StatelessWidget {
                   subtitle: sleep.active ? SleepTimerLabel.of(sleep) : null,
                 ),
               ),
+              if (!kIsWeb)
+                ListenableBuilder(
+                  listenable: c.karaoke,
+                  builder: (context, _) => tile(
+                    Icons.mic_rounded,
+                    tr.karaoke,
+                    then(showKaraoke),
+                    on: c.karaoke.enabled,
+                    subtitle: karaokeStatus(c.karaoke),
+                  ),
+                ),
               if (Features.casting)
                 ListenableBuilder(
                   listenable: c.cast,

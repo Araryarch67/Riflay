@@ -4049,5 +4049,20 @@
   "autoDownloadLiked": "Automatically download liked songs",
   "dailySleepTimer": "Daily sleep timer",
   "dailyPlaylistAlarm": "Daily playlist alarm",
-  "scheduleWhileRunning": "Works while Riflay is running"
+  "scheduleWhileRunning": "Works while Riflay is running",
+  "karaoke": "Karaoke",
+  "karaokeHint": "Turn the song's vocals down or off and sing along. Each song is split once, on this device.",
+  "karaokeDownloadNote": "Turning it on downloads the vocal separation model once (about {size} MB).",
+  "@karaokeDownloadNote": {"placeholders": {"size": {"type": "int"}}},
+  "karaokeDownloading": "Downloading the separation model… {percent}%",
+  "@karaokeDownloading": {"placeholders": {"percent": {"type": "int"}}},
+  "karaokeReading": "Reading the song…",
+  "karaokeSeparating": "Separating the vocals… {percent}%",
+  "@karaokeSeparating": {"placeholders": {"percent": {"type": "int"}}},
+  "karaokeReady": "Vocals separated. Next time this song starts at once.",
+  "karaokeUnsupported": "This song's source can't be separated. Try it after downloading the song.",
+  "karaokeFailed": "Couldn't separate this song.",
+  "karaokeUnavailable": "Karaoke isn't available on iPhone and iPad yet.",
+  "karaokeVocals": "Vocals",
+  "karaokeMusic": "Music"
 }

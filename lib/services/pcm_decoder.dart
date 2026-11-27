@@ -61,15 +61,15 @@ abstract final class FfmpegPcm {
   static bool get supported => Host.isWindows && Ffmpeg.installed;
 
   /// Decodes [path] (a file or a URL) whole, as stereo PCM of [bits] (16 or 32), at its own rate unless that is
-  /// above [maxRate].
-  static Future<PcmStream> decode(String path, {int? maxRate, required int bits}) async {
+  /// above [maxRate], or resampled to [rate].
+  static Future<PcmStream> decode(String path, {int? rate, int? maxRate, required int bits}) async {
     assert(bits == 16 || bits == 32);
     final ffmpeg = await Ffmpeg.executable();
     final format = bits == 16 ? 's16le' : 's32le';
     // Above [maxRate] the file comes down to the highest common rate under it: its own rate first, read from its
     // header (ffmpeg's filters can't pick a rate from a list the way mpv's do).
-    int? to;
-    if (maxRate != null) {
+    int? to = rate;
+    if (maxRate != null && rate == null) {
       final probe = await Process.run(ffmpeg, ['-hide_banner', '-nostdin', '-i', path]);
       // "Audio: flac, 96000 Hz, stereo": the codec, then its rate.
       final own = RegExp(r'Audio: [^,]+, (\d+) Hz').firstMatch('${probe.stderr}');
@@ -84,7 +84,7 @@ abstract final class FfmpegPcm {
       '-c:a', 'pcm_$format', '-f', format, 'pipe:1',
     ]);
     // The rate ffmpeg settled on, from its description of the output: "Audio: pcm_s32le, 44100 Hz".
-    final rate = Completer<int>();
+    final settled = Completer<int>();
     var output = false;
     process.stderr
         .transform(const SystemEncoding().decoder)
@@ -92,12 +92,12 @@ abstract final class FfmpegPcm {
         .listen(
           (line) {
             if (line.startsWith('Output #0')) output = true;
-            if (!output || rate.isCompleted) return;
+            if (!output || settled.isCompleted) return;
             final m = RegExp(r'Audio: pcm_s(?:16|32)le[^,]*, (\d+) Hz').firstMatch(line);
-            if (m != null) rate.complete(int.parse(m.group(1)!));
+            if (m != null) settled.complete(int.parse(m.group(1)!));
           },
           onDone: () {
-            if (!rate.isCompleted) rate.completeError(StateError('ffmpeg could not decode $path'));
+            if (!settled.isCompleted) settled.completeError(StateError('ffmpeg could not decode $path'));
           },
         );
     Future<void> stop() async {
@@ -105,7 +105,7 @@ abstract final class FfmpegPcm {
     }
 
     try {
-      final hz = await rate.future.timeout(const Duration(seconds: 20));
+      final hz = await settled.future.timeout(const Duration(seconds: 20));
       return PcmStream._from(
         process.stdout.map((chunk) => chunk is Uint8List ? chunk : Uint8List.fromList(chunk)),
         stop,

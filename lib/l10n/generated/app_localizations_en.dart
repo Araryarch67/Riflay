@@ -7901,4 +7901,47 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get scheduleWhileRunning => 'Works while Riflay is running';
+
+  @override
+  String get karaoke => 'Karaoke';
+
+  @override
+  String get karaokeHint =>
+      'Turn the song\'s vocals down or off and sing along. Each song is split once, on this device.';
+
+  @override
+  String karaokeDownloadNote(int size) {
+    return 'Turning it on downloads the vocal separation model once (about $size MB).';
+  }
+
+  @override
+  String karaokeDownloading(int percent) {
+    return 'Downloading the separation model… $percent%';
+  }
+
+  @override
+  String get karaokeReading => 'Reading the song…';
+
+  @override
+  String karaokeSeparating(int percent) {
+    return 'Separating the vocals… $percent%';
+  }
+
+  @override
+  String get karaokeReady => 'Vocals separated. Next time this song starts at once.';
+
+  @override
+  String get karaokeUnsupported => 'This song\'s source can\'t be separated. Try it after downloading the song.';
+
+  @override
+  String get karaokeFailed => 'Couldn\'t separate this song.';
+
+  @override
+  String get karaokeUnavailable => 'Karaoke isn\'t available on iPhone and iPad yet.';
+
+  @override
+  String get karaokeVocals => 'Vocals';
+
+  @override
+  String get karaokeMusic => 'Music';
 }

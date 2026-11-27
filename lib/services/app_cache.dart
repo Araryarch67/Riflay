@@ -11,7 +11,8 @@ import 'youtube_audio_source.dart';
 
 /// Settings › About › Clear cache: what Riflay keeps only to save the network or time, and fetches again when
 /// it is gone. Covers of online songs and the media notification's copies, lyrics found online, YouTube Music's
-/// Discover shelves, AutoEQ's list of headphones, Wrap's share images, and streamed songs a crash left behind.
+/// Discover shelves, Karaoke's stems, AutoEQ's list of headphones, Wrap's share images, and streamed songs a crash
+/// left behind.
 ///
 /// Never touched: the library, playlists, downloads, settings, lyrics written by hand (`my-lyrics`), and the
 /// loudness and bit-depth measurements (`audio-analysis.json`): measuring them again decodes every file, and
@@ -39,6 +40,7 @@ abstract final class AppCache {
       Directory(p.join(f.cache, 'artwork')),
       Directory(p.join(f.cache, 'now-playing-art')),
       Directory(p.join(f.cache, 'video-streams')),
+      Directory(p.join(f.cache, 'karaoke')), // Karaoke's stems: split again when played
       Directory(p.join(f.support, 'lyrics-cache')),
       File(p.join(f.support, 'autoeq_index.md')),
       File(p.join(f.support, OpraEq.cacheName)),

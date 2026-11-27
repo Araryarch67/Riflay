@@ -14126,6 +14126,78 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Works while Riflay is running'**
   String get scheduleWhileRunning;
+
+  /// No description provided for @karaoke.
+  ///
+  /// In en, this message translates to:
+  /// **'Karaoke'**
+  String get karaoke;
+
+  /// No description provided for @karaokeHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Turn the song\'s vocals down or off and sing along. Each song is split once, on this device.'**
+  String get karaokeHint;
+
+  /// No description provided for @karaokeDownloadNote.
+  ///
+  /// In en, this message translates to:
+  /// **'Turning it on downloads the vocal separation model once (about {size} MB).'**
+  String karaokeDownloadNote(int size);
+
+  /// No description provided for @karaokeDownloading.
+  ///
+  /// In en, this message translates to:
+  /// **'Downloading the separation model… {percent}%'**
+  String karaokeDownloading(int percent);
+
+  /// No description provided for @karaokeReading.
+  ///
+  /// In en, this message translates to:
+  /// **'Reading the song…'**
+  String get karaokeReading;
+
+  /// No description provided for @karaokeSeparating.
+  ///
+  /// In en, this message translates to:
+  /// **'Separating the vocals… {percent}%'**
+  String karaokeSeparating(int percent);
+
+  /// No description provided for @karaokeReady.
+  ///
+  /// In en, this message translates to:
+  /// **'Vocals separated. Next time this song starts at once.'**
+  String get karaokeReady;
+
+  /// No description provided for @karaokeUnsupported.
+  ///
+  /// In en, this message translates to:
+  /// **'This song\'s source can\'t be separated. Try it after downloading the song.'**
+  String get karaokeUnsupported;
+
+  /// No description provided for @karaokeFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t separate this song.'**
+  String get karaokeFailed;
+
+  /// No description provided for @karaokeUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Karaoke isn\'t available on iPhone and iPad yet.'**
+  String get karaokeUnavailable;
+
+  /// No description provided for @karaokeVocals.
+  ///
+  /// In en, this message translates to:
+  /// **'Vocals'**
+  String get karaokeVocals;
+
+  /// No description provided for @karaokeMusic.
+  ///
+  /// In en, this message translates to:
+  /// **'Music'**
+  String get karaokeMusic;
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

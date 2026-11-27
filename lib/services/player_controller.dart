@@ -42,6 +42,8 @@ import 'download_files.dart' show nameDownload;
 import 'mv_sidecar.dart';
 import 'sacd.dart';
 import 'sleep_timer.dart';
+import 'karaoke.dart';
+import 'pcm_decoder.dart';
 import 'soundcloud.dart';
 import 'merged_download.dart';
 import 'smart_merge.dart';
@@ -149,6 +151,7 @@ class PlayerController extends ChangeNotifier {
             _prefetchNext();
             _prefetchDownloadFormats();
             _measureForLeveling();
+            _followKaraoke();
             _recordRecent();
             _updatePresence();
             MemoryTrim.schedule();
@@ -665,6 +668,14 @@ class PlayerController extends ChangeNotifier {
 
   /// "Stop the music in 30 minutes": fades the volume down and pauses.
   final SleepTimer sleep = SleepTimer();
+
+  /// Karaoke: the playing song's vocals turned down or off, from stems made on this device.
+  late final Karaoke karaoke = Karaoke(
+    current: () => currentTrack,
+    input: _karaokeInput,
+    reload: _reloadForKaraoke,
+    applyLevels: (v) => audio.setKaraokeLevels(v).ignore(),
+  );
 
   /// Overlaps the end of a song with the start of the next (Settings › Sound › Sound effects (DSP) › Crossfade).
   late final Crossfader _crossfader;
@@ -2649,6 +2660,7 @@ class PlayerController extends ChangeNotifier {
 
   AudioSource _buildSourceFor(Track t, {Track? tag}) {
     final identity = tag ?? t;
+    if (karaoke.stemsFor(identity) case final stems?) return AudioSource.uri(Uri.file(stems), tag: identity);
     if (SacdDisc.isSacdTrack(t)) {
       final found = SacdDisc.find(t);
       if (found != null) {
@@ -2715,6 +2727,48 @@ class PlayerController extends ChangeNotifier {
     return t.isCueTrack
         ? ClippingAudioSource(child: AudioSource.uri(t.uri), start: t.start, end: t.end, tag: identity)
         : AudioSource.uri(t.uri, tag: identity);
+  }
+
+  void _followKaraoke() {
+    if (!karaoke.enabled || casting) return;
+    final source = player.sequenceState.currentSource;
+    karaoke.follow(playingStems: source is UriAudioSource && karaoke.isStems(source.uri)).ignore();
+  }
+
+  /// What Karaoke decodes for [t]: the file or stream it plays from, and its slice of a cue sheet.
+  (PcmInput, Duration?, Duration?)? _karaokeInput(Track t) {
+    var source = _buildSourceFor(t);
+    Duration? start, end;
+    if (source is ClippingAudioSource) {
+      start = source.start;
+      end = source.end;
+      source = source.child;
+    }
+    if (source is UriAudioSource) {
+      final uri = source.uri;
+      return (PcmInput.file(uri.scheme == 'file' ? uri.toFilePath() : '$uri'), start, end);
+    }
+    // A stream mpv reads through its loopback server; Windows' ffmpeg decoder takes files and URLs only.
+    // ignore: experimental_member_use
+    if (source is StreamAudioSource && MpvPcm.supported) return (PcmInput.stream(source), start, end);
+    return null;
+  }
+
+  /// The queue's sources built again where the song is, so the song moves to its stems or back.
+  Future<void> _reloadForKaraoke() async {
+    final state = player.sequenceState;
+    final index = state.currentIndex;
+    if (_disposed || casting || index == null) return;
+    final playing = player.playing, position = player.position;
+    final generation = _playbackRetryGeneration;
+    await player.setAudioSources(
+      [for (final s in state.sequence) _sourceFor(s.tag as Track)],
+      initialIndex: index,
+      initialPosition: position,
+    );
+    if (_disposed || generation != _playbackRetryGeneration) return;
+    await player.seek(position);
+    if (playing) unawaited(_play());
   }
 
   /// Search cards and shared links can omit length. Only the playing song may
@@ -3597,6 +3651,7 @@ class PlayerController extends ChangeNotifier {
     _mergeWatch?.cancel();
     _crossfader.dispose();
     sleep.dispose();
+    karaoke.dispose();
     for (final s in _subs) {
       s.cancel();
     }

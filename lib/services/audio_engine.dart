@@ -24,6 +24,7 @@ import 'carla_locator.dart';
 import 'crossfade.dart';
 import 'beta_features.dart';
 import 'direct_usb.dart';
+import 'karaoke.dart';
 import 'ios_route.dart';
 import 'linux_alsa.dart';
 import 'usb_dac.dart';
@@ -591,6 +592,14 @@ class AudioEngine extends ChangeNotifier {
 
   /// Channels the playing song decodes to (mpv's `audio-params`), which picks [virtualRoom]; null before one opens.
   int? sourceChannels;
+
+  /// Karaoke's levels (the vocals and the music, each 0–1), null with Karaoke off.
+  KaraokeLevels? karaokeLevels;
+
+  Future<void> setKaraokeLevels(KaraokeLevels? v) => _set(() => karaokeLevels = v);
+
+  /// Karaoke's stems play (4 channels: the music, then the vocals) and are mixed down to stereo first.
+  bool get karaokeActive => karaokeLevels != null && sourceChannels == 4;
 
   /// Dolby Digital, Dolby Digital Plus (Atmos too), TrueHD and DTS go out untouched over HDMI or S/PDIF, for an AV
   /// receiver or soundbar to decode (the only way to hear Atmos' height objects: no free decoder has them).
@@ -1509,7 +1518,7 @@ class AudioEngine extends ChangeNotifier {
   /// around the head, and for stereo under [surroundUpmix].
   VirtualRoom get virtualRoom {
     if (hrir71Path == null || DebugSwitches.stereoVirtualSpeakers) return VirtualRoom.stereo;
-    if ((sourceChannels ?? 2) > 2) return VirtualRoom.surround;
+    if ((sourceChannels ?? 2) > 2 && !karaokeActive) return VirtualRoom.surround;
     return surroundUpmix ? VirtualRoom.upmix : VirtualRoom.stereo;
   }
 
@@ -1637,6 +1646,8 @@ class AudioEngine extends ChangeNotifier {
   String get filterChain {
     String n(double v) => v.toStringAsFixed(2);
     return [
+      // First, Karaoke's stems become the stereo song every later stage expects.
+      if (karaokeActive) Karaoke.karaokeFilter(karaokeLevels!.vocals, music: karaokeLevels!.music),
       // Before everything else: what is cut needs no processing.
       if (skipSilenceActive) skipSilenceFilter,
       // A pitch shift: mpv plays faster or slower by the pitch (see [mpvSpeed]); this undoes the tempo part.

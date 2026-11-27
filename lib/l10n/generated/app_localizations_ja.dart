@@ -7658,4 +7658,46 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get scheduleWhileRunning => 'Riflay の起動中に動作します';
+
+  @override
+  String get karaoke => 'カラオケ';
+
+  @override
+  String get karaokeHint => '曲のボーカルを小さくしたり消したりして一緒に歌えます。分離は曲ごとに一度だけ、この端末で行います。';
+
+  @override
+  String karaokeDownloadNote(int size) {
+    return 'オンにすると、ボーカル分離モデル（約 $size MB）を一度だけダウンロードします。';
+  }
+
+  @override
+  String karaokeDownloading(int percent) {
+    return '分離モデルをダウンロード中… $percent%';
+  }
+
+  @override
+  String get karaokeReading => '曲を読み込み中…';
+
+  @override
+  String karaokeSeparating(int percent) {
+    return 'ボーカルを分離中… $percent%';
+  }
+
+  @override
+  String get karaokeReady => 'ボーカルを分離しました。次回からこの曲はすぐに始まります。';
+
+  @override
+  String get karaokeUnsupported => 'この曲の配信元は分離できません。曲をダウンロードしてからお試しください。';
+
+  @override
+  String get karaokeFailed => 'この曲を分離できませんでした。';
+
+  @override
+  String get karaokeUnavailable => 'カラオケは iPhone と iPad ではまだ使えません。';
+
+  @override
+  String get karaokeVocals => 'ボーカル';
+
+  @override
+  String get karaokeMusic => '伴奏';
 }

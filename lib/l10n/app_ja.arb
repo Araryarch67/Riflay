@@ -2342,5 +2342,17 @@
   "autoDownloadLiked": "高評価した曲を自動でダウンロード",
   "dailySleepTimer": "毎日のスリープタイマー",
   "dailyPlaylistAlarm": "毎日のプレイリストアラーム",
-  "scheduleWhileRunning": "Riflay の起動中に動作します"
+  "scheduleWhileRunning": "Riflay の起動中に動作します",
+  "karaoke": "カラオケ",
+  "karaokeHint": "曲のボーカルを小さくしたり消したりして一緒に歌えます。分離は曲ごとに一度だけ、この端末で行います。",
+  "karaokeDownloadNote": "オンにすると、ボーカル分離モデル（約 {size} MB）を一度だけダウンロードします。",
+  "karaokeDownloading": "分離モデルをダウンロード中… {percent}%",
+  "karaokeReading": "曲を読み込み中…",
+  "karaokeSeparating": "ボーカルを分離中… {percent}%",
+  "karaokeReady": "ボーカルを分離しました。次回からこの曲はすぐに始まります。",
+  "karaokeUnsupported": "この曲の配信元は分離できません。曲をダウンロードしてからお試しください。",
+  "karaokeFailed": "この曲を分離できませんでした。",
+  "karaokeUnavailable": "カラオケは iPhone と iPad ではまだ使えません。",
+  "karaokeVocals": "ボーカル",
+  "karaokeMusic": "伴奏"
 }
