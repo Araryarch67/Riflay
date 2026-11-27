@@ -24,6 +24,7 @@ import 'carla_locator.dart';
 import 'crossfade.dart';
 import 'beta_features.dart';
 import 'direct_usb.dart';
+import 'eq_level_match.dart';
 import 'karaoke.dart';
 import 'ios_route.dart';
 import 'linux_alsa.dart';
@@ -470,7 +471,7 @@ class AudioEngine extends ChangeNotifier {
   /// What [webEffects] applies, from the same settings mpv's [filterChain] is made of.
   @visibleForTesting
   WebEffects get webEffectsNow => WebEffects(
-    preamp: preamp,
+    preamp: preamp + abTrim,
     eq: eqActive
         ? [
             for (final b in bands)
@@ -1302,7 +1303,28 @@ class AudioEngine extends ChangeNotifier {
   Future<void> setBitPerfect(bool v) => _set(() => bitPerfectWanted = v, reopen: true);
   Future<void> setNativeDsd(bool v) => _set(() => nativeDsd = v, reopen: true);
 
-  Future<void> setEqEnabled(bool v) => _set(() => eqEnabled = v);
+  Future<void> setEqEnabled(bool v) => _set(() {
+    eqEnabled = v;
+    _endAb();
+  });
+
+  /// The equalizer's A/B comparison: side B plays without the equalizer, turned down by [abTrim] to be as
+  /// loud as side A, so the difference heard isn't just loudness. Not saved: it ends with any change to the curve.
+  bool abBypass = false;
+  double abTrim = 0;
+
+  void _endAb() {
+    abBypass = false;
+    abTrim = 0;
+  }
+
+  Future<void> setAbBypass(bool v) => _set(() {
+    _endAb();
+    if (!v || !eqActive) return;
+    // [preamp] only reads 0 once [abBypass] is set, so it is taken now, with the equalizer still on.
+    abTrim = eqBypassTrim(bands, preamp);
+    abBypass = true;
+  });
 
   Future<void> setConvolution(bool v) => _set(() => convolution = v && impulsePath != null);
 
@@ -1327,6 +1349,7 @@ class AudioEngine extends ChangeNotifier {
   }
 
   Future<void> setBand(int i, EqBand band) => _set(() {
+    _endAb();
     bands = [...bands]..[i] = band;
     eqPreset = 'Custom';
     eqProfile = null;
@@ -1334,6 +1357,7 @@ class AudioEngine extends ChangeNotifier {
 
   /// Bands made for a headphone or IEM ([AutoEq]), named [profile].
   Future<void> applyEqProfile(String profile, List<EqBand> profileBands) => _set(() {
+    _endAb();
     bands = profileBands;
     eqPreset = 'Custom';
     eqProfile = profile;
@@ -1341,6 +1365,7 @@ class AudioEngine extends ChangeNotifier {
   });
 
   Future<void> applyPreset(String name) => _set(() {
+    _endAb();
     final gains = eqPresets[name];
     if (gains == null) return;
     eqPreset = name;
@@ -1492,7 +1517,7 @@ class AudioEngine extends ChangeNotifier {
   Timer? _chainSync;
 
   /// Equalizer curve active right now (bit-perfect mode bypasses everything).
-  bool get eqActive => eqEnabled && !bitPerfect && bands.any((b) => b.gain.abs() > 0.05);
+  bool get eqActive => eqEnabled && !abBypass && !bitPerfect && bands.any((b) => b.gain.abs() > 0.05);
   bool get monoActive => mono != MonoAudio.off && !bitPerfect;
 
   /// It changes what is played, so never in bit-perfect mode, nor on DSD sent as DoP.
@@ -1658,6 +1683,8 @@ class AudioEngine extends ChangeNotifier {
           'convolution',
           'amovie=filename=${graphPath(impulsePath!)}[ir];[in][ir]afir${convolutionGain == 0 ? '' : ',volume=volume=${n(convolutionGain)}dB'}[out]',
         ),
+      // The equalizer's A/B side with it bypassed gets a gain of its own to match the other's loudness.
+      if (abBypass && abTrim < 0) '@abtrim:lavfi=[volume=volume=${n(abTrim)}dB]',
       if (eqActive) ...[
         if (preamp < 0) '@preamp:lavfi=[volume=volume=${n(preamp)}dB]',
         '@eq:lavfi=[${bands.where((b) => b.gain.abs() > 0.05).map((b) => 'equalizer=f=${n(b.frequency)}:t=q:w=${n(b.q)}:g=${n(b.gain)}').join(',')}]',

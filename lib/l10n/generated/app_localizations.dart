@@ -10287,6 +10287,24 @@ abstract class AppLocalizations {
   /// **'Bit-perfect mode is on, so the equalizer is bypassed. Turn it off in Settings › Sound › Output & quality.'**
   String get eqBitPerfectNote;
 
+  /// No description provided for @eqCompareA.
+  ///
+  /// In en, this message translates to:
+  /// **'A · EQ on'**
+  String get eqCompareA;
+
+  /// No description provided for @eqCompareB.
+  ///
+  /// In en, this message translates to:
+  /// **'B · EQ off'**
+  String get eqCompareB;
+
+  /// No description provided for @eqCompareNote.
+  ///
+  /// In en, this message translates to:
+  /// **'Compare with the same loudness: B is turned down {db} dB.'**
+  String eqCompareNote(String db);
+
   /// No description provided for @eqHint.
   ///
   /// In en, this message translates to:

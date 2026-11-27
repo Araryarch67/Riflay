@@ -3074,6 +3074,16 @@
   },
   "checkingSize": "Checking size…",
   "eqBitPerfectNote": "Bit-perfect mode is on, so the equalizer is bypassed. Turn it off in Settings › Sound › Output & quality.",
+  "eqCompareA": "A · EQ on",
+  "eqCompareB": "B · EQ off",
+  "eqCompareNote": "Compare with the same loudness: B is turned down {db} dB.",
+  "@eqCompareNote": {
+    "placeholders": {
+      "db": {
+        "type": "String"
+      }
+    }
+  },
   "eqHint": "Pick a preset or drag the sliders. Tap a frequency to fine-tune it.",
   "eqHeadroom": "Headroom {db} dB, so boosted bands never distort.",
   "@eqHeadroom": {
