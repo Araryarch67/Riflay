@@ -12987,6 +12987,12 @@ abstract class AppLocalizations {
   /// **'peak {db} dBFS'**
   String dsPeak(String db);
 
+  /// No description provided for @dsTruePeak.
+  ///
+  /// In en, this message translates to:
+  /// **'true peak {db} dBTP'**
+  String dsTruePeak(String db);
+
   /// No description provided for @dsMeasuredGain.
   ///
   /// In en, this message translates to:

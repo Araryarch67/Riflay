@@ -7195,6 +7195,11 @@ class AppLocalizationsId extends AppLocalizations {
   }
 
   @override
+  String dsTruePeak(String db) {
+    return 'puncak sejati $db dBTP';
+  }
+
+  @override
   String get dsMeasuredGain => 'Gain terukur';
 
   @override

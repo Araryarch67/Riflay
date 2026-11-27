@@ -3829,6 +3829,8 @@
   "dsDrHeavy": "heavily compressed",
   "dsLoudness": "Loudness",
   "dsPeak": "peak {db} dBFS",
+  "dsTruePeak": "true peak {db} dBTP",
+  "@dsTruePeak": {"placeholders": {"db": {"type": "String"}}},
   "@dsPeak": {"placeholders": {"db": {"type": "String"}}},
   "dsMeasuredGain": "Measured gain",
   "dsMeasuredGainValue": "{gain} dB (leveling uses it without ReplayGain tags)",
