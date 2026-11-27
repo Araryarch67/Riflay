@@ -34,6 +34,8 @@ end
 target 'Runner' do
   use_frameworks!
   pod 'SpotiflacRuntime', :path => 'SpotiflacRuntime'
+  # The onnxruntime plugin's own pod points at a C library archive that is no longer served; see the podspec.
+  pod 'onnxruntime-objc', :path => 'OnnxRuntimeObjc'
 
   flutter_install_all_ios_pods File.dirname(File.realpath(__FILE__))
   target 'RunnerTests' do
