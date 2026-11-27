@@ -705,6 +705,30 @@ FILE "album.wav" WAVE
     });
   });
 
+  group('manual headroom', () {
+    setUp(() => SharedPreferences.setMockInitialValues({}));
+
+    test('auto by default, override replaces it, survives preset change and restart', () async {
+      final a = AudioEngine();
+      await a.applyPreset('Pop');
+      final auto = a.preamp;
+      expect(auto, lessThan(-5));
+
+      await a.setPreampOverride(-12);
+      expect(a.preamp, -12);
+      expect(a.filterChain, contains('volume=-12.00dB'));
+      await a.applyPreset('Rock');
+      expect(a.preamp, -12);
+
+      final b = AudioEngine();
+      await b.load();
+      expect(b.preampOverride, -12);
+
+      await b.setPreampOverride(null);
+      expect(b.preamp, closeTo(-AudioEngine.peakGain(b.bands), 1e-9));
+    });
+  });
+
   group('tag editor', () {
     late Directory dir;
     setUpAll(Metadata.probeTagTools);

@@ -1702,6 +1702,7 @@
   "eqBitPerfectNote": "Bit-perfect モードがオンなので、イコライザーは使われない。「設定 › サウンド › 出力と音質」でオフにしてね。",
   "eqHint": "プリセットを選ぶか、スライダーをドラッグしてね。周波数をタップすると細かく調整できる。",
   "eqHeadroom": "ヘッドルーム {db} dB。上げた帯域でも音割れしない。",
+  "eqHeadroomAuto": "自動",
   "changeFrequency": "周波数と幅を変える",
   "bandNumber": "バンド {number}",
   "defaultLabel": "デフォルト",

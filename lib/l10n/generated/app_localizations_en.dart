@@ -5728,6 +5728,9 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get eqHeadroomAuto => 'Auto';
+
+  @override
   String get changeFrequency => 'Change frequency and width';
 
   @override

@@ -10299,6 +10299,12 @@ abstract class AppLocalizations {
   /// **'Headroom {db} dB, so boosted bands never distort.'**
   String eqHeadroom(String db);
 
+  /// No description provided for @eqHeadroomAuto.
+  ///
+  /// In en, this message translates to:
+  /// **'Auto'**
+  String get eqHeadroomAuto;
+
   /// No description provided for @changeFrequency.
   ///
   /// In en, this message translates to:

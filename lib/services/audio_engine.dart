@@ -1086,6 +1086,7 @@ class AudioEngine extends ChangeNotifier {
       leveling = VolumeLeveling.values.asNameMap()[j['leveling']] ?? leveling;
       buffer = BufferSize.values.asNameMap()[j['buffer']] ?? buffer;
       eqEnabled = j['eqEnabled'] as bool? ?? eqEnabled;
+      preampOverride = (j['preampOverride'] as num?)?.toDouble().clamp(-20.0, 0.0);
       eqPreset = j['eqPreset'] as String? ?? eqPreset;
       eqProfile = j['eqProfile'] as String?;
       final b = j['bands'] as List?;
@@ -1180,6 +1181,7 @@ class AudioEngine extends ChangeNotifier {
       'leveling': leveling.name,
       'buffer': buffer.name,
       'eqEnabled': eqEnabled,
+      'preampOverride': preampOverride,
       'eqPreset': eqPreset,
       'eqProfile': eqProfile,
       'bands': [for (final b in bands) b.toJson()],
@@ -1536,14 +1538,22 @@ class AudioEngine extends ChangeNotifier {
   /// Lowered so boosted bands can't clip: the curve's loudest point ends at
   /// 0 dB. Neighbouring bands overlap, so that point is above the loudest band
   /// when boosts sit side by side (Bass boost's +6 and +5 dB make +7.1 at 32 Hz).
+  ///
+  /// [preampOverride] replaces the automatic value; it outlives preset and
+  /// profile changes on purpose, only "Auto" (null) clears it.
   double get preamp {
     if (!eqActive) return 0;
+    if (preampOverride != null) return preampOverride!;
     if (!identical(_peakOf, bands)) {
       _peakOf = bands;
       _peak = peakGain(bands);
     }
     return _peak > 0 ? -_peak : 0;
   }
+
+  double? preampOverride;
+
+  Future<void> setPreampOverride(double? db) => _set(() => preampOverride = db?.clamp(-20.0, 0.0));
 
   List<EqBand>? _peakOf;
   double _peak = 0;

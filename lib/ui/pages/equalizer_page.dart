@@ -130,18 +130,45 @@ class EqualizerPanel extends StatelessWidget {
           ),
           Padding(
             padding: EdgeInsets.fromLTRB(pad, 16, pad, 0),
-            child: Row(
+            child: Column(
               children: [
-                if (audio.preamp < 0)
-                  Expanded(
-                    child: Text(
-                      tr.eqHeadroom(audio.preamp.toStringAsFixed(1)),
-                      style: text.bodySmall?.copyWith(color: AppColors.textMuted),
+                Row(
+                  children: [
+                    if (audio.preamp < 0)
+                      Expanded(
+                        child: Text(
+                          tr.eqHeadroom(audio.preamp.toStringAsFixed(1)),
+                          style: text.bodySmall?.copyWith(color: AppColors.textMuted),
+                        ),
+                      )
+                    else
+                      const Spacer(),
+                    TextButton(
+                      onPressed: audio.bitPerfect ? null : () => audio.applyPreset('Flat'),
+                      child: Text(tr.reset),
                     ),
-                  )
-                else
-                  const Spacer(),
-                TextButton(onPressed: audio.bitPerfect ? null : () => audio.applyPreset('Flat'), child: Text(tr.reset)),
+                  ],
+                ),
+                // Shown only while the curve is in use: with a flat curve there is no filter to lower.
+                if (audio.eqActive)
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Slider(
+                          min: -20,
+                          max: 0,
+                          divisions: 40,
+                          value: audio.preamp.clamp(-20.0, 0.0),
+                          label: '${audio.preamp.toStringAsFixed(1)} dB',
+                          onChanged: audio.setPreampOverride,
+                        ),
+                      ),
+                      TextButton(
+                        onPressed: audio.preampOverride == null ? null : () => audio.setPreampOverride(null),
+                        child: Text(tr.eqHeadroomAuto),
+                      ),
+                    ],
+                  ),
               ],
             ),
           ),
