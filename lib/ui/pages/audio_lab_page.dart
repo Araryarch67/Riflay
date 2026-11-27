@@ -566,45 +566,49 @@ class _AudioLabPageState extends State<AudioLabPage> {
     return Scaffold(
       appBar: AppBar(title: Text(tr.audioLab)),
       body: SafeArea(
-        child: Center(
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 1100),
-            child: ListView(
-              padding: const EdgeInsets.fromLTRB(16, 0, 16, 32),
-              children: [
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(4, 0, 4, 16),
-                  child: Text(tr.audioLabSubtitle, style: muted),
-                ),
-                graph,
-                const SizedBox(height: 12),
-                if (wide)
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Expanded(child: equalizer),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [headphone, const SizedBox(height: 12), target],
-                        ),
-                      ),
-                    ],
-                  )
-                else ...[
-                  equalizer,
-                  const SizedBox(height: 12),
-                  headphone,
-                  const SizedBox(height: 12),
-                  target,
-                ],
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(4, 20, 4, 0),
-                  child: Text(tr.labCredits, style: small),
-                ),
-              ],
+        child: LayoutBuilder(
+          // The list as wide as the window, its content centred by its padding: the wheel scrolls it anywhere on the
+          // page, the margins beside the content too.
+          builder: (context, box) => ListView(
+            padding: EdgeInsets.fromLTRB(
+              math.max(16, (box.maxWidth - 1100) / 2),
+              0,
+              math.max(16, (box.maxWidth - 1100) / 2),
+              32,
             ),
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(4, 0, 4, 16),
+                child: Text(tr.audioLabSubtitle, style: muted),
+              ),
+              graph,
+              const SizedBox(height: 12),
+              if (wide)
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(child: equalizer),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [headphone, const SizedBox(height: 12), target],
+                      ),
+                    ),
+                  ],
+                )
+              else ...[
+                equalizer,
+                const SizedBox(height: 12),
+                headphone,
+                const SizedBox(height: 12),
+                target,
+              ],
+              Padding(
+                padding: const EdgeInsets.fromLTRB(4, 20, 4, 0),
+                child: Text(tr.labCredits, style: small),
+              ),
+            ],
           ),
         ),
       ),

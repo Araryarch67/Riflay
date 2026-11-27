@@ -1,5 +1,6 @@
 import 'dart:math' as math;
 
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:riflay/services/audio_engine.dart';
@@ -216,5 +217,24 @@ const other = { files: ["not a target"] };
     await tester.pumpAndSettle();
     expect(scroll.position.pixels, greaterThan(50), reason: 'the page scrolled');
     expect([for (final b in c.audio.bands) b.gain], before);
+  });
+
+  testWidgets('the wheel in the margin beside the content scrolls the page on a wide window', (tester) async {
+    tester.view.physicalSize = const Size(1600, 800);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    final c = PlayerController();
+    addTearDown(() async => tester.runAsync(() async => c.dispose()));
+    await tester.pumpWidget(
+      PlayerScope(
+        controller: c,
+        child: const MaterialApp(home: AudioLabPage()),
+      ),
+    );
+    await tester.pump();
+    final scroll = tester.state<ScrollableState>(find.byType(Scrollable).first);
+    tester.binding.handlePointerEvent(const PointerScrollEvent(position: Offset(60, 500), scrollDelta: Offset(0, 300)));
+    await tester.pumpAndSettle();
+    expect(scroll.position.pixels, greaterThan(100));
   });
 }
