@@ -5731,6 +5731,9 @@ class AppLocalizationsId extends AppLocalizations {
   }
 
   @override
+  String get eqHeadroomAuto => 'Otomatis';
+
+  @override
   String get changeFrequency => 'Ubah frekuensi dan lebar';
 
   @override

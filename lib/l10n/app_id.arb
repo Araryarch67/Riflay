@@ -1725,6 +1725,7 @@
   "eqCompareNote": "Bandingkan dengan volume yang sama: B diturunkan {db} dB.",
   "eqHint": "Pilih preset atau geser slider. Ketuk frekuensi untuk menyetelnya.",
   "eqHeadroom": "Headroom {db} dB, jadi band yang dinaikkan tidak pernah pecah.",
+  "eqHeadroomAuto": "Otomatis",
   "changeFrequency": "Ubah frekuensi dan lebar",
   "bandNumber": "Band {number}",
   "defaultLabel": "Bawaan",

@@ -5602,6 +5602,9 @@ class AppLocalizationsJa extends AppLocalizations {
   }
 
   @override
+  String get eqHeadroomAuto => '自動';
+
+  @override
   String get changeFrequency => '周波数と幅を変える';
 
   @override

@@ -217,6 +217,26 @@ class EqualizerPanel extends StatelessWidget {
                     ),
                   ],
                 ),
+                // The headroom by hand, only while the curve is in use: a flat curve has no filter to lower.
+                if (audio.eqActive)
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Slider(
+                          min: -20,
+                          max: 0,
+                          divisions: 40,
+                          value: audio.preamp.clamp(-20.0, 0.0),
+                          label: '${audio.preamp.toStringAsFixed(1)} dB',
+                          onChanged: audio.setPreampOverride,
+                        ),
+                      ),
+                      TextButton(
+                        onPressed: audio.preampOverride == null ? null : () => audio.setPreampOverride(null),
+                        child: Text(tr.eqHeadroomAuto),
+                      ),
+                    ],
+                  ),
               ],
             ),
           ),

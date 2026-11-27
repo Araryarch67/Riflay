@@ -3107,6 +3107,7 @@
       }
     }
   },
+  "eqHeadroomAuto": "Auto",
   "changeFrequency": "Change frequency and width",
   "bandNumber": "Band {number}",
   "@bandNumber": {
