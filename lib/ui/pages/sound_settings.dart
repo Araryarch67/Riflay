@@ -590,6 +590,16 @@ class _AdvancedAudioSettingsState extends State<AdvancedAudioSettings> {
               onChanged: locked && audio.bypassesMixer ? null : audio.setHqResampler,
             ),
             SettingTile(
+              icon: Icons.grain_rounded,
+              title: Text(tr.ditherShape),
+              subtitle: Text(tr.ditherShapeSubtitle, style: muted),
+              control: OptionPicker<DitherShape>(
+                value: audio.dither,
+                onChanged: audio.setDither,
+                options: [for (final d in DitherShape.values) (d, d.label)],
+              ),
+            ),
+            SettingTile(
               icon: Icons.timer_outlined,
               title: Text(tr.buffer),
               subtitle: Text(tr.bufferSubtitle, style: muted),

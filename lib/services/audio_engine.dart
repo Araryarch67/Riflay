@@ -47,6 +47,28 @@ enum VolumeLeveling {
   final String mpv;
 }
 
+/// How the dither noise added when the sound is rounded to 16 bits is spread over the spectrum. libswresample
+/// already implements these as `dither_method` (noise shaping filters), so nothing is written here: the shaped
+/// ones push the hiss up to where the ear is least sensitive, at the cost of more total noise above 10 kHz.
+enum DitherShape {
+  /// Plain TPDF: flat noise, the safe default.
+  flat('triangular_hp'),
+
+  /// Lipshitz's filter: a gentle shift of the noise to high frequencies.
+  lipshitz('lipshitz'),
+
+  /// Shibata's filter: a steeper shift, for the quietest floor in the audible band.
+  shibata('shibata');
+
+  const DitherShape(this.swresample);
+  String get label => switch (this) {
+    flat => tr.ditherFlat,
+    lipshitz => tr.ditherLipshitz,
+    shibata => tr.ditherShibata,
+  };
+  final String swresample;
+}
+
 /// Output buffering: shorter reacts faster, longer survives a busy system.
 enum BufferSize {
   low(0.05),
@@ -638,6 +660,7 @@ class AudioEngine extends ChangeNotifier {
   /// Null follows each song's own rate.
   int? outputRate;
   bool hqResampler = true;
+  DitherShape dither = DitherShape.flat;
 
   /// Bit-perfect mode leaves the rate alone, except through Windows' shared
   /// mixer: mpv still converts to the mixer's rate there, so with this resampler.
@@ -1105,6 +1128,7 @@ class AudioEngine extends ChangeNotifier {
       exclusive = j['exclusive'] as bool? ?? exclusive;
       outputRate = j['outputRate'] as int?;
       hqResampler = j['hqResampler'] as bool? ?? hqResampler;
+      dither = DitherShape.values.asNameMap()[j['dither']] ?? dither;
       bitPerfectWanted = j['bitPerfect'] as bool? ?? bitPerfectWanted;
       nativeDsd = j['nativeDsd'] as bool? ?? nativeDsd;
       directUsbWanted = Host.isAndroid && (j['directUsb'] as bool? ?? false);
@@ -1198,6 +1222,7 @@ class AudioEngine extends ChangeNotifier {
       'exclusive': exclusive,
       'outputRate': outputRate,
       'hqResampler': hqResampler,
+      'dither': dither.name,
       'bitPerfect': bitPerfectWanted,
       'nativeDsd': nativeDsd,
       'directUsb': directUsbWanted,
@@ -1299,6 +1324,7 @@ class AudioEngine extends ChangeNotifier {
   Future<void> setExclusive(bool v) => _set(() => exclusive = v, reopen: true);
   Future<void> setOutputRate(int? v) => _set(() => outputRate = v, reopen: true);
   Future<void> setHqResampler(bool v) => _set(() => hqResampler = v);
+  Future<void> setDither(DitherShape v) => _set(() => dither = v);
   Future<void> setBitPerfect(bool v) => _set(() => bitPerfectWanted = v, reopen: true);
   Future<void> setNativeDsd(bool v) => _set(() => nativeDsd = v, reopen: true);
 
@@ -2187,7 +2213,7 @@ class AudioEngine extends ChangeNotifier {
   /// it leaves distortion that follows the music; with it, a steady hiss far below hearing. Bit-perfect playback
   /// at 100% converts nothing, so it is never dithered.
   Future<String> _swresampleOptions() async =>
-      [if (hqResamplerActive) await _hqResampler(), 'dither_method=triangular_hp'].join(',');
+      [if (hqResamplerActive) await _hqResampler(), 'dither_method=${dither.swresample}'].join(',');
 
   /// Linux, through PipeWire: the one rate PipeWire runs at, so Riflay's resampler converts to it rather than
   /// PipeWire's (see [LinuxAlsa.pipewireFixedRate]). Null elsewhere, with the resampler off, or when PipeWire

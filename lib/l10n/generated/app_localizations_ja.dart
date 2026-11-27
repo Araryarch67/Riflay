@@ -1767,6 +1767,21 @@ class AppLocalizationsJa extends AppLocalizations {
   String get hqResamplerSubtitle => 'レートを変えるときは SoX 並みの変換をする（CPU を少し多めに使う）';
 
   @override
+  String get ditherShape => 'ディザーのノイズシェイピング';
+
+  @override
+  String get ditherShapeSubtitle => '16bit に丸めるときだけ働く。シェイプしたディザーは小さなノイズを聞こえにくい高域へ寄せる';
+
+  @override
+  String get ditherFlat => 'フラット (TPDF)';
+
+  @override
+  String get ditherLipshitz => 'Lipshitz';
+
+  @override
+  String get ditherShibata => 'Shibata';
+
+  @override
   String get buffer => 'バッファ';
 
   @override

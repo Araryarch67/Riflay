@@ -3381,6 +3381,36 @@ abstract class AppLocalizations {
   /// **'SoX-grade conversion whenever the rate has to change (slightly more CPU)'**
   String get hqResamplerSubtitle;
 
+  /// No description provided for @ditherShape.
+  ///
+  /// In en, this message translates to:
+  /// **'Dither noise shaping'**
+  String get ditherShape;
+
+  /// No description provided for @ditherShapeSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Only matters when the sound is rounded to 16 bits. Shaped dither moves the faint hiss toward high frequencies where it is harder to hear'**
+  String get ditherShapeSubtitle;
+
+  /// No description provided for @ditherFlat.
+  ///
+  /// In en, this message translates to:
+  /// **'Flat (TPDF)'**
+  String get ditherFlat;
+
+  /// No description provided for @ditherLipshitz.
+  ///
+  /// In en, this message translates to:
+  /// **'Lipshitz'**
+  String get ditherLipshitz;
+
+  /// No description provided for @ditherShibata.
+  ///
+  /// In en, this message translates to:
+  /// **'Shibata'**
+  String get ditherShibata;
+
   /// No description provided for @buffer.
   ///
   /// In en, this message translates to:

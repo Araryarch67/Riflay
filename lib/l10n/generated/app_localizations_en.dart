@@ -1808,6 +1808,22 @@ class AppLocalizationsEn extends AppLocalizations {
   String get hqResamplerSubtitle => 'SoX-grade conversion whenever the rate has to change (slightly more CPU)';
 
   @override
+  String get ditherShape => 'Dither noise shaping';
+
+  @override
+  String get ditherShapeSubtitle =>
+      'Only matters when the sound is rounded to 16 bits. Shaped dither moves the faint hiss toward high frequencies where it is harder to hear';
+
+  @override
+  String get ditherFlat => 'Flat (TPDF)';
+
+  @override
+  String get ditherLipshitz => 'Lipshitz';
+
+  @override
+  String get ditherShibata => 'Shibata';
+
+  @override
   String get buffer => 'Buffer';
 
   @override
