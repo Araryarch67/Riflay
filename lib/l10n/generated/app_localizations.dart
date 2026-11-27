@@ -4455,6 +4455,162 @@ abstract class AppLocalizations {
   /// **'My songs, on Riflay'**
   String get posterCaption;
 
+  /// No description provided for @audioLab.
+  ///
+  /// In en, this message translates to:
+  /// **'Audio Lab'**
+  String get audioLab;
+
+  /// No description provided for @labTargetHeadphone.
+  ///
+  /// In en, this message translates to:
+  /// **'Use another headphone as the target'**
+  String get labTargetHeadphone;
+
+  /// No description provided for @labNone.
+  ///
+  /// In en, this message translates to:
+  /// **'No target (equalizer only)'**
+  String get labNone;
+
+  /// No description provided for @labFitTarget.
+  ///
+  /// In en, this message translates to:
+  /// **'Fit to target'**
+  String get labFitTarget;
+
+  /// No description provided for @labEqOn.
+  ///
+  /// In en, this message translates to:
+  /// **'EQ on'**
+  String get labEqOn;
+
+  /// No description provided for @labExport.
+  ///
+  /// In en, this message translates to:
+  /// **'Copy as ParametricEQ.txt'**
+  String get labExport;
+
+  /// No description provided for @labCopied.
+  ///
+  /// In en, this message translates to:
+  /// **'EQ copied as ParametricEQ.txt'**
+  String get labCopied;
+
+  /// No description provided for @labFrequency.
+  ///
+  /// In en, this message translates to:
+  /// **'Frequency'**
+  String get labFrequency;
+
+  /// No description provided for @labGain.
+  ///
+  /// In en, this message translates to:
+  /// **'Gain'**
+  String get labGain;
+
+  /// No description provided for @labBass.
+  ///
+  /// In en, this message translates to:
+  /// **'Bass'**
+  String get labBass;
+
+  /// No description provided for @labTilt.
+  ///
+  /// In en, this message translates to:
+  /// **'Tilt'**
+  String get labTilt;
+
+  /// No description provided for @labDragHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Drag a band\'s point on the graph: sideways for its frequency, up and down for its gain. The mouse wheel over the graph narrows or widens it.'**
+  String get labDragHint;
+
+  /// No description provided for @audioLabTile.
+  ///
+  /// In en, this message translates to:
+  /// **'See the response graph and tune to Harman or other targets'**
+  String get audioLabTile;
+
+  /// No description provided for @audioLabSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Your headphone\'s measured response set against a target curve, and the equalizer fitted to match it.'**
+  String get audioLabSubtitle;
+
+  /// No description provided for @labHeadphone.
+  ///
+  /// In en, this message translates to:
+  /// **'Headphone'**
+  String get labHeadphone;
+
+  /// No description provided for @labTarget.
+  ///
+  /// In en, this message translates to:
+  /// **'Target'**
+  String get labTarget;
+
+  /// No description provided for @labSourceFile.
+  ///
+  /// In en, this message translates to:
+  /// **'File'**
+  String get labSourceFile;
+
+  /// No description provided for @labPick.
+  ///
+  /// In en, this message translates to:
+  /// **'Pick a headphone'**
+  String get labPick;
+
+  /// No description provided for @labChooseFile.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose a file (.txt, .csv)'**
+  String get labChooseFile;
+
+  /// No description provided for @labSite.
+  ///
+  /// In en, this message translates to:
+  /// **'squig.link site'**
+  String get labSite;
+
+  /// No description provided for @labWithEq.
+  ///
+  /// In en, this message translates to:
+  /// **'With EQ'**
+  String get labWithEq;
+
+  /// No description provided for @labGap.
+  ///
+  /// In en, this message translates to:
+  /// **'After EQ it stays within {db} dB of the target, up to 10 kHz.'**
+  String labGap(String db);
+
+  /// No description provided for @labApplied.
+  ///
+  /// In en, this message translates to:
+  /// **'Equalizer set: {name}'**
+  String labApplied(String name);
+
+  /// No description provided for @labLoadFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t load it. Check the address or your connection.'**
+  String get labLoadFailed;
+
+  /// No description provided for @labKindMismatch.
+  ///
+  /// In en, this message translates to:
+  /// **'This target is made for a different kind of headphone (in-ear or over-ear).'**
+  String get labKindMismatch;
+
+  /// No description provided for @labCredits.
+  ///
+  /// In en, this message translates to:
+  /// **'Measurements and targets from AutoEQ (MIT) and the squig.link site you pick, fetched only when picked. Each measurement belongs to whoever measured it.'**
+  String get labCredits;
+
   /// No description provided for @posterDecor.
   ///
   /// In en, this message translates to:

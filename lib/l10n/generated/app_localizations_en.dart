@@ -2383,6 +2383,91 @@ class AppLocalizationsEn extends AppLocalizations {
   String get posterCaption => 'My songs, on Riflay';
 
   @override
+  String get audioLab => 'Audio Lab';
+
+  @override
+  String get labTargetHeadphone => 'Use another headphone as the target';
+
+  @override
+  String get labNone => 'No target (equalizer only)';
+
+  @override
+  String get labFitTarget => 'Fit to target';
+
+  @override
+  String get labEqOn => 'EQ on';
+
+  @override
+  String get labExport => 'Copy as ParametricEQ.txt';
+
+  @override
+  String get labCopied => 'EQ copied as ParametricEQ.txt';
+
+  @override
+  String get labFrequency => 'Frequency';
+
+  @override
+  String get labGain => 'Gain';
+
+  @override
+  String get labBass => 'Bass';
+
+  @override
+  String get labTilt => 'Tilt';
+
+  @override
+  String get labDragHint =>
+      'Drag a band\'s point on the graph: sideways for its frequency, up and down for its gain. The mouse wheel over the graph narrows or widens it.';
+
+  @override
+  String get audioLabTile => 'See the response graph and tune to Harman or other targets';
+
+  @override
+  String get audioLabSubtitle =>
+      'Your headphone\'s measured response set against a target curve, and the equalizer fitted to match it.';
+
+  @override
+  String get labHeadphone => 'Headphone';
+
+  @override
+  String get labTarget => 'Target';
+
+  @override
+  String get labSourceFile => 'File';
+
+  @override
+  String get labPick => 'Pick a headphone';
+
+  @override
+  String get labChooseFile => 'Choose a file (.txt, .csv)';
+
+  @override
+  String get labSite => 'squig.link site';
+
+  @override
+  String get labWithEq => 'With EQ';
+
+  @override
+  String labGap(String db) {
+    return 'After EQ it stays within $db dB of the target, up to 10 kHz.';
+  }
+
+  @override
+  String labApplied(String name) {
+    return 'Equalizer set: $name';
+  }
+
+  @override
+  String get labLoadFailed => 'Couldn\'t load it. Check the address or your connection.';
+
+  @override
+  String get labKindMismatch => 'This target is made for a different kind of headphone (in-ear or over-ear).';
+
+  @override
+  String get labCredits =>
+      'Measurements and targets from AutoEQ (MIT) and the squig.link site you pick, fetched only when picked. Each measurement belongs to whoever measured it.';
+
+  @override
   String get posterDecor => 'Decor';
 
   @override

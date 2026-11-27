@@ -217,7 +217,6 @@ abstract final class AutoEq {
     if (asIs) return (bands: finish(start), error: 0);
 
     final freqs = [for (var i = 0; i <= 120; i++) 20 * math.pow(2, i / 12).toDouble()];
-    final weight = [for (final f in freqs) f > 10000 ? 0.5 : 1.0];
     final target = List.filled(freqs.length, 0.0);
     for (final f in filters) {
       final c = _curve(f, freqs);
@@ -229,6 +228,20 @@ abstract final class AutoEq {
     while (bands.length < count) {
       bands.add(EqBand(spare.isEmpty ? 1000 : spare[bands.length % spare.length].frequency, 0));
     }
+    final (fitted, worst) = _descend(bands, freqs, target);
+    return (bands: finish(fitted.where((b) => b.gain.abs() > 0.05).toList()), error: worst);
+  }
+
+  /// The grid curves are fitted on: 1/12 octave from 20 Hz to 20 kHz.
+  static final fitFrequencies = [for (var i = 0; i <= 120; i++) 20 * math.pow(2, i / 12).toDouble()];
+
+  /// [bands] moved, sized and narrowed one at a time until together they follow [target] (dB at each of [freqs])
+  /// as closely as they can, above 10 kHz counting half; with the worst miss up to 10 kHz, in dB.
+  static (List<EqBand>, double) _descend(List<EqBand> start, List<double> freqs, List<double> target) {
+    EqBand clamp(EqBand b) =>
+        EqBand(b.frequency.clamp(20, 20000), b.gain.clamp(-12, 12), q: b.q.clamp(0.3, 8).toDouble());
+    final weight = [for (final f in freqs) f > 10000 ? 0.5 : 1.0];
+    final bands = [...start];
     var curves = [for (final b in bands) _curve(_peaking(b), freqs)];
     final sum = List.filled(freqs.length, 0.0);
     for (final c in curves) {
@@ -281,8 +294,34 @@ abstract final class AutoEq {
     for (var i = 0; i < freqs.length; i++) {
       if (freqs[i] <= 10000) worst = math.max(worst, (sum[i] - target[i]).abs());
     }
-    return (bands: finish(bands.where((b) => b.gain.abs() > 0.05).toList()), error: worst);
+    return (bands, worst);
   }
+
+  /// The equalizer's [count] bands that turn a sound by [target] (dB at each of [freqs], e.g. a headphone's
+  /// distance from a target curve): started from the default bands at the curve's level there, then fitted.
+  static AutoEqFit fitCurve(List<double> freqs, List<double> target, {int count = 10}) {
+    double at(double f) {
+      var best = 0;
+      for (var i = 1; i < freqs.length; i++) {
+        if ((freqs[i] - f).abs() < (freqs[best] - f).abs()) best = i;
+      }
+      return target[best];
+    }
+
+    final start = [for (final f in defaultEqFrequencies.take(count)) EqBand(f, (at(f) * 0.6).clamp(-12, 12))];
+    final (fitted, worst) = _descend(start, freqs, target);
+    return (
+      bands: [
+        for (final b in fitted..sort((a, b) => a.frequency.compareTo(b.frequency)))
+          EqBand(b.frequency.roundToDouble(), (b.gain * 10).roundToDouble() / 10, q: (b.q * 100).roundToDouble() / 100),
+      ],
+      error: worst,
+    );
+  }
+
+  /// What [bands] do at [frequency], in dB.
+  static double bandsDb(List<EqBand> bands, double frequency) =>
+      bands.fold(0.0, (sum, b) => sum + _curve(_peaking(b), [frequency]).single);
 
   /// [AutoEqEntry.path] and the name as the file's URL.
   static Uri _profileUrl(AutoEqEntry e) =>

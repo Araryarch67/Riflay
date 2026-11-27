@@ -10,6 +10,7 @@ import '../widgets/page_scaffold.dart';
 import '../../services/language.dart';
 import '../widgets/app_dialog.dart';
 import '../widgets/auto_eq_picker.dart';
+import 'audio_lab_page.dart';
 
 /// Ten-band equalizer with presets. Each band's frequency and width can be
 /// changed too (tap its label), which makes it a parametric EQ.
@@ -92,6 +93,20 @@ class EqualizerPanel extends StatelessWidget {
                 trailing: const Icon(Icons.chevron_right_rounded),
                 enabled: !audio.bitPerfect,
                 onTap: () => showAutoEqPicker(context),
+              ),
+            ),
+          ),
+          Padding(
+            padding: EdgeInsets.symmetric(horizontal: pad - 16),
+            child: Material(
+              type: MaterialType.transparency,
+              child: ListTile(
+                leading: const Icon(Icons.science_outlined),
+                title: Text(tr.audioLab),
+                subtitle: Text(tr.audioLabTile, style: text.bodyMedium?.copyWith(color: AppColors.textSecondary)),
+                trailing: const Icon(Icons.chevron_right_rounded),
+                enabled: !audio.bitPerfect,
+                onTap: () => openAudioLab(context),
               ),
             ),
           ),

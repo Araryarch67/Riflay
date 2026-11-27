@@ -15,6 +15,7 @@ void main() {
     'Wrap',
     'Riflay Wrap',
     'Figtree', 'Space Grotesk',
+    'squig.link', 'name.squig.link',
     'es, pt-BR, zh-TW', // language codes, the hint of Settings › Language code
     'Matugen',
     'Bit-perfect',

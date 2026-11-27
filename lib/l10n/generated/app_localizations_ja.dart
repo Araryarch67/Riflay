@@ -2329,6 +2329,88 @@ class AppLocalizationsJa extends AppLocalizations {
   String get posterCaption => '私の曲、Riflay で';
 
   @override
+  String get audioLab => 'オーディオラボ';
+
+  @override
+  String get labTargetHeadphone => '別のヘッドホンをターゲットにする';
+
+  @override
+  String get labNone => 'ターゲットなし (イコライザーのみ)';
+
+  @override
+  String get labFitTarget => 'ターゲットに合わせる';
+
+  @override
+  String get labEqOn => 'EQ オン';
+
+  @override
+  String get labExport => 'ParametricEQ.txt としてコピー';
+
+  @override
+  String get labCopied => 'EQ を ParametricEQ.txt としてコピーしました';
+
+  @override
+  String get labFrequency => '周波数';
+
+  @override
+  String get labGain => 'ゲイン';
+
+  @override
+  String get labBass => '低音';
+
+  @override
+  String get labTilt => '傾き';
+
+  @override
+  String get labDragHint => 'グラフ上のバンドの点をドラッグ: 横で周波数、縦でゲイン。グラフ上のマウスホイールで幅を変えられます。';
+
+  @override
+  String get audioLabTile => '特性グラフを見て Harman などのターゲットに調整';
+
+  @override
+  String get audioLabSubtitle => 'ヘッドホンの測定された周波数特性をターゲットカーブと比べ、それに合うようにイコライザーを調整します。';
+
+  @override
+  String get labHeadphone => 'ヘッドホン';
+
+  @override
+  String get labTarget => 'ターゲット';
+
+  @override
+  String get labSourceFile => 'ファイル';
+
+  @override
+  String get labPick => 'ヘッドホンを選ぶ';
+
+  @override
+  String get labChooseFile => 'ファイルを選ぶ (.txt, .csv)';
+
+  @override
+  String get labSite => 'squig.link サイト';
+
+  @override
+  String get labWithEq => 'EQ 適用後';
+
+  @override
+  String labGap(String db) {
+    return 'EQ 後のターゲットとの差は 10 kHz まで最大 $db dB です。';
+  }
+
+  @override
+  String labApplied(String name) {
+    return 'イコライザーを設定しました: $name';
+  }
+
+  @override
+  String get labLoadFailed => '読み込めませんでした。アドレスか接続を確認してください。';
+
+  @override
+  String get labKindMismatch => 'このターゲットは別の種類のヘッドホン (インイヤーかオーバーイヤー) 向けです。';
+
+  @override
+  String get labCredits => '測定データとターゲットは AutoEQ (MIT) と選んだ squig.link サイトから、選んだときだけ取得します。各測定データは測定した人のものです。';
+
+  @override
   String get posterDecor => 'デコ';
 
   @override

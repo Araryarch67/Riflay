@@ -2378,6 +2378,91 @@ class AppLocalizationsId extends AppLocalizations {
   String get posterCaption => 'Lagu-laguku, di Riflay';
 
   @override
+  String get audioLab => 'Audio Lab';
+
+  @override
+  String get labTargetHeadphone => 'Pakai headphone lain sebagai target';
+
+  @override
+  String get labNone => 'Tanpa target (equalizer saja)';
+
+  @override
+  String get labFitTarget => 'Cocokkan ke target';
+
+  @override
+  String get labEqOn => 'EQ aktif';
+
+  @override
+  String get labExport => 'Salin sebagai ParametricEQ.txt';
+
+  @override
+  String get labCopied => 'EQ disalin sebagai ParametricEQ.txt';
+
+  @override
+  String get labFrequency => 'Frekuensi';
+
+  @override
+  String get labGain => 'Gain';
+
+  @override
+  String get labBass => 'Bass';
+
+  @override
+  String get labTilt => 'Tilt';
+
+  @override
+  String get labDragHint =>
+      'Seret titik band di grafik: ke samping untuk frekuensi, ke atas-bawah untuk gain. Roda mouse di atas grafik menyempitkan atau melebarkannya.';
+
+  @override
+  String get audioLabTile => 'Lihat grafik respons dan setel ke Harman atau target lain';
+
+  @override
+  String get audioLabSubtitle =>
+      'Respons headphone-mu hasil pengukuran dibandingkan dengan kurva target, lalu equalizer disetel agar cocok.';
+
+  @override
+  String get labHeadphone => 'Headphone';
+
+  @override
+  String get labTarget => 'Target';
+
+  @override
+  String get labSourceFile => 'File';
+
+  @override
+  String get labPick => 'Pilih headphone';
+
+  @override
+  String get labChooseFile => 'Pilih file (.txt, .csv)';
+
+  @override
+  String get labSite => 'Situs squig.link';
+
+  @override
+  String get labWithEq => 'Dengan EQ';
+
+  @override
+  String labGap(String db) {
+    return 'Setelah EQ, selisihnya dengan target paling besar $db dB, sampai 10 kHz.';
+  }
+
+  @override
+  String labApplied(String name) {
+    return 'Equalizer disetel: $name';
+  }
+
+  @override
+  String get labLoadFailed => 'Gagal memuat. Periksa alamatnya atau koneksimu.';
+
+  @override
+  String get labKindMismatch => 'Target ini dibuat untuk jenis headphone lain (in-ear atau over-ear).';
+
+  @override
+  String get labCredits =>
+      'Pengukuran dan target dari AutoEQ (MIT) dan situs squig.link yang kamu pilih, diambil hanya saat dipilih. Setiap pengukuran milik orang yang mengukurnya.';
+
+  @override
   String get posterDecor => 'Hiasan';
 
   @override
