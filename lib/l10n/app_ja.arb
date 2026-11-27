@@ -2159,6 +2159,7 @@
   "dsDrHeavy": "強く圧縮",
   "dsLoudness": "ラウドネス",
   "dsPeak": "ピーク {db} dBFS",
+  "dsTruePeak": "トゥルーピーク {db} dBTP",
   "dsMeasuredGain": "測定したゲイン",
   "dsMeasuredGainValue": "{gain} dB(ReplayGainタグがないときの音量調整に使う)",
   "dsDecoded": "デコード",

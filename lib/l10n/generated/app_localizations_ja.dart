@@ -7052,6 +7052,11 @@ class AppLocalizationsJa extends AppLocalizations {
   }
 
   @override
+  String dsTruePeak(String db) {
+    return 'トゥルーピーク $db dBTP';
+  }
+
+  @override
   String get dsMeasuredGain => '測定したゲイン';
 
   @override

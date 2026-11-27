@@ -401,7 +401,7 @@ class _DetailStatsSheetState extends State<_DetailStatsSheet> {
               if (r.dr case final dr?) (t.dsDynamicRange, _dr(dr, t)),
               (
                 t.dsLoudness,
-                '${r.lufs == null ? '-' : '${r.lufs!.toStringAsFixed(1)} LUFS'} · ${t.dsPeak(r.peakDb.toStringAsFixed(1))}',
+                '${r.lufs == null ? '-' : '${r.lufs!.toStringAsFixed(1)} LUFS'} · ${t.dsPeak(r.peakDb.toStringAsFixed(1))}${r.truePeakDb == null ? '' : ' · ${t.dsTruePeak(r.truePeakDb!.toStringAsFixed(1))}'}',
               ),
               if (r.gainDb case final g?)
                 (t.dsMeasuredGain, t.dsMeasuredGainValue('${g >= 0 ? '+' : ''}${g.toStringAsFixed(1)}')),

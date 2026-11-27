@@ -2166,6 +2166,7 @@
   "dsDrHeavy": "sangat terkompresi",
   "dsLoudness": "Kenyaringan",
   "dsPeak": "puncak {db} dBFS",
+  "dsTruePeak": "puncak sejati {db} dBTP",
   "dsMeasuredGain": "Gain terukur",
   "dsMeasuredGainValue": "{gain} dB (dipakai penyeimbang volume kalau tidak ada tag ReplayGain)",
   "dsDecoded": "Didekode",

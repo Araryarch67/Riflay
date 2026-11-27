@@ -2,6 +2,8 @@ import 'dart:convert';
 import 'dart:math' as math;
 import 'dart:typed_data';
 
+import 'true_peak.dart';
+
 /// What the spectrum says about where a lossless file came from.
 enum SourceVerdict {
   /// Sound up to the top of its band, as a lossless recording has.
@@ -21,6 +23,7 @@ class AudioReport {
   const AudioReport({
     required this.lufs,
     required this.peakDb,
+    this.truePeakDb,
     required this.dr,
     required this.rate,
     this.cutoffHz,
@@ -37,6 +40,9 @@ class AudioReport {
 
   /// The highest sample, dBFS.
   final double peakDb;
+
+  /// The highest point between samples (4× oversampled, dBTP); null for reports measured before this was.
+  final double? truePeakDb;
 
   /// Dynamic range, DR Meter style (DR14 is very dynamic, DR5 brick-walled); null when too short to tell.
   final int? dr;
@@ -77,6 +83,7 @@ class AudioReport {
   Map<String, Object?> toJson() => {
     'lufs': lufs,
     'peak': peakDb,
+    'tp': truePeakDb,
     'dr': dr,
     'rate': rate,
     'cutoff': cutoffHz,
@@ -89,6 +96,7 @@ class AudioReport {
   static AudioReport fromJson(Map<String, dynamic> j) => AudioReport(
     lufs: (j['lufs'] as num?)?.toDouble(),
     peakDb: (j['peak'] as num).toDouble(),
+    truePeakDb: (j['tp'] as num?)?.toDouble(),
     dr: (j['dr'] as num?)?.toInt(),
     rate: (j['rate'] as num).toInt(),
     cutoffHz: (j['cutoff'] as num?)?.toDouble(),
@@ -105,6 +113,7 @@ class AudioReport {
   AudioReport withStoredBits(int? bits) => AudioReport(
     lufs: lufs,
     peakDb: peakDb,
+    truePeakDb: truePeakDb,
     dr: dr,
     rate: rate,
     cutoffHz: cutoffHz,
@@ -119,6 +128,7 @@ class AudioReport {
   AudioReport withSpectrogram(Uint8List data, int columns) => AudioReport(
     lufs: lufs,
     peakDb: peakDb,
+    truePeakDb: truePeakDb,
     dr: dr,
     rate: rate,
     cutoffHz: cutoffHz,
@@ -164,6 +174,7 @@ class AudioAnalyzer {
   int _blockCount = 0;
 
   double _peak = 0;
+  late final _truePeaks = List.generate(channels, (_) => TruePeakMeter());
 
   // Bit depth: every sample's bits OR'd together.
   int _bitMask = 0;
@@ -201,6 +212,7 @@ class AudioAnalyzer {
         mono += x;
         final a = x.abs();
         if (a > _peak) _peak = a;
+        _truePeaks[ch].add(x);
         if (a > _blockPeaks[ch]) _blockPeaks[ch] = a;
         _blockSquares[ch] += x * x;
         final s = _state[ch];
@@ -311,6 +323,7 @@ class AudioAnalyzer {
     return AudioReport(
       lufs: _integratedLoudness(),
       peakDb: _db(_peak),
+      truePeakDb: _db(_truePeaks.fold(0.0, (m, t) => math.max(m, t.peak))),
       dr: _dynamicRange(),
       rate: rate,
       cutoffHz: _cutoff().$1,

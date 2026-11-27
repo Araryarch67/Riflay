@@ -7286,6 +7286,11 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String dsTruePeak(String db) {
+    return 'true peak $db dBTP';
+  }
+
+  @override
   String get dsMeasuredGain => 'Measured gain';
 
   @override
