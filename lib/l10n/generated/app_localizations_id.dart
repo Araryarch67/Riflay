@@ -1802,6 +1802,22 @@ class AppLocalizationsId extends AppLocalizations {
   String get hqResamplerSubtitle => 'Konversi setara SoX setiap kali rate harus berubah (sedikit lebih berat di CPU)';
 
   @override
+  String get ditherShape => 'Noise shaping dither';
+
+  @override
+  String get ditherShapeSubtitle =>
+      'Hanya berpengaruh saat suara dibulatkan ke 16 bit. Dither berbentuk memindahkan desis halus ke frekuensi tinggi yang lebih sulit terdengar';
+
+  @override
+  String get ditherFlat => 'Datar (TPDF)';
+
+  @override
+  String get ditherLipshitz => 'Lipshitz';
+
+  @override
+  String get ditherShibata => 'Shibata';
+
+  @override
   String get buffer => 'Buffer';
 
   @override

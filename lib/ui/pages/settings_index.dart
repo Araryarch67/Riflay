@@ -300,6 +300,7 @@ abstract final class SettingsOptions {
       subtitle: (t) => t.hqResamplerSubtitle,
       find: (t) => t.kwSampleRate,
     ),
+    SettingsOption('dither', .output, (t) => t.ditherShape, subtitle: (t) => t.ditherShapeSubtitle),
     SettingsOption('buffer', .output, (t) => t.buffer, subtitle: (t) => t.bufferSubtitle, find: (t) => t.kwBuffer),
     SettingsOption(
       'outputSignalPath',
