@@ -51,6 +51,7 @@ import '../services/system_tray.dart';
 import '../services/youtube_importer.dart';
 import '../services/youtube_links.dart';
 import '../services/youtube_music_account.dart' show RemotePlaylist;
+import '../services/connect/connect_host.dart';
 import '../services/listen_together/listen_together.dart';
 import 'pages/listen_together_page.dart';
 import 'shell/desktop_sidebar.dart';
@@ -199,6 +200,8 @@ class _HomeShellState extends State<HomeShell> with SingleTickerProviderStateMix
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
     });
     // "Ana joined" and the like, while a Listen together session is on.
+    // A desktop that left remote control on starts listening again (nothing else about playback changes).
+    if (Features.connectHost) unawaited(ConnectHost.of(c).load());
     _listenEvents?.cancel();
     _listenEvents = ListenTogether.of(c).events.listen((message) {
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));

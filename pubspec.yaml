@@ -74,6 +74,8 @@ dependencies:
   dbus: ^0.7.15
   connectivity_plus: ^7.3.1
   mqtt_client: ^10.14.0
+  # Riflay Connect: a direct data channel to the owner of a shared song (no audio server).
+  flutter_webrtc: ^1.7.0
   typed_data: ^1.4.0
   # The web build's one browser call (lib/platform/network_web.dart).
   web: ^1.1.1

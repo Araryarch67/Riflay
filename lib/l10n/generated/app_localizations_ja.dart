@@ -7813,4 +7813,184 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get bookmarksEmpty => 'ブックマークはまだありません。';
+
+  @override
+  String get connectTitle => 'Riflay Connect';
+
+  @override
+  String get connectSummary => '別の端末からパソコンの Riflay を操作します';
+
+  @override
+  String get connectIntro => 'スマホや別のパソコンから、このパソコンの再生・一時停止・キュー追加ができます。音楽はこのパソコンに残り、コマンドと再生情報だけが暗号化されてインターネットを通ります。';
+
+  @override
+  String get connectThisComputer => 'このパソコン';
+
+  @override
+  String get connectAllow => 'リモート操作を許可';
+
+  @override
+  String get connectAllowSubtitle => 'Riflay を開いている間、ペアリング済みの端末が再生を操作できます。';
+
+  @override
+  String get connectUnreachable => 'サーバーに接続できません。再試行しています…';
+
+  @override
+  String get connectPairDevice => '端末をペアリング';
+
+  @override
+  String get connectPairingCode => 'ペアリングコード';
+
+  @override
+  String get connectPairingHowTo => 'もう一方の端末で Riflay Connect を開き、このコードを入力するか QR コードを読み取ってください。コードは一度だけ使え、5 分で無効になります。';
+
+  @override
+  String get connectPairingQrSemantics => 'ペアリングコードの QR コード';
+
+  @override
+  String get connectCancelPairing => 'ペアリングを中止';
+
+  @override
+  String connectRequest(String name) {
+    return '$name がこのパソコンの Riflay を操作しようとしています。';
+  }
+
+  @override
+  String get connectDeny => '許可しない';
+
+  @override
+  String get connectPairedDevices => 'ペアリング済みの端末';
+
+  @override
+  String get connectNoControllers => 'まだペアリングされた端末はありません。';
+
+  @override
+  String get connectActiveNow => '接続中';
+
+  @override
+  String get connectRevoke => 'アクセスを取り消す';
+
+  @override
+  String get connectControlTitle => 'パソコンを操作';
+
+  @override
+  String get connectControlIntro => 'パソコンで「設定 › Riflay Connect」を開き、リモート操作をオンにして「端末をペアリング」を選び、表示されたコードをここに入力してください。';
+
+  @override
+  String get connectPair => 'ペアリング';
+
+  @override
+  String get connectWaitingConfirm => 'パソコンでの確認を待っています…';
+
+  @override
+  String get connectYourComputers => 'あなたのパソコン';
+
+  @override
+  String get connectForget => '削除';
+
+  @override
+  String get connectConnected => '接続済み';
+
+  @override
+  String get connectConnecting => '接続中…';
+
+  @override
+  String get connectDisconnected => '未接続。再試行しています…';
+
+  @override
+  String get connectStopControlling => '操作をやめる';
+
+  @override
+  String get connectNothingPlaying => '再生中の曲はありません';
+
+  @override
+  String get connectAddHere => 'この端末で再生中の曲を追加';
+
+  @override
+  String get connectAddHint => '今のところ、他のパソコンのキューに追加できるのは YouTube の曲だけです。';
+
+  @override
+  String get connectRepeatOff => 'リピートなし';
+
+  @override
+  String get connectRepeatAll => '全曲リピート';
+
+  @override
+  String get connectRepeatOne => '1 曲リピート';
+
+  @override
+  String get connectShuffle => 'シャッフル';
+
+  @override
+  String get connectBadCode => 'ペアリングコードではありません。確認してもう一度お試しください。';
+
+  @override
+  String get connectPairUnreachable => 'サーバーに接続できません。インターネット接続を確認してください。';
+
+  @override
+  String get connectPairNotFound => 'パソコンから応答がありません。コードと、パソコンの画面にまだ表示されているかを確認してください。';
+
+  @override
+  String get connectPairDenied => 'パソコンで許可されませんでした。';
+
+  @override
+  String get connectRevokedNotice => 'この端末はパソコンから削除されました。';
+
+  @override
+  String get notAConnectQr => 'この QR コードは Riflay Connect のペアリングコードではありません。';
+
+  @override
+  String get connectQrHowTo => 'もう一方の端末の Riflay で Riflay Connect を開き、「QR コードを読み取る」を選んでください。';
+
+  @override
+  String get connectShareTitle => '共有する音楽';
+
+  @override
+  String get connectShareSummary => 'ペアリングした端末とアルバム、アーティスト、プレイリストを共有';
+
+  @override
+  String get connectShareIntro =>
+      '共有するものを選びます。送られるのは名前、アーティスト、年、曲名だけで、ファイルや保存場所は送られません。相手は見るだけで変更できず、共有はいつでも止められます。両方の端末が接続されている必要があります。';
+
+  @override
+  String get connectShareByYou => 'あなたが共有中';
+
+  @override
+  String get connectShareWithYou => 'あなたに共有中';
+
+  @override
+  String get connectShareNothingYet => 'まだ共有されているものはありません。';
+
+  @override
+  String get connectShareNoneOnDevice => '共有できるアルバム、アーティスト、プレイリストがこの端末にありません。';
+
+  @override
+  String get connectShareOffline => '接続されていません。最後に受信した内容を表示しています。';
+
+  @override
+  String get connectShareLoading => '曲を読み込み中…';
+
+  @override
+  String get connectShareSaveCopy => 'コピーを保存';
+
+  @override
+  String get connectShareCopies => 'あなたのコピー';
+
+  @override
+  String get connectShareCopiesHint => 'コピーは名前の変更や削除ができます。共有した相手の変更には追従しません。';
+
+  @override
+  String connectShareReadOnly(String name) {
+    return '$name が共有中。見るだけで変更はできません。';
+  }
+
+  @override
+  String get connectOwnTitle => '自分のファイルとして配信する';
+
+  @override
+  String get connectOwnHint =>
+      'ペアリングした端末がこのコンピューターからこれらの曲を再生できます。自分のものとして印を付けたファイルだけが配信され、ストリーミングサービスの曲やサービスからダウンロードした曲は配信されません。';
+
+  @override
+  String get connectStreamFailed => 'コンピューターに接続できませんでした。同じWi-Fiまたはネットワークで再試行するか、Riflay Connectでリレーを設定してください。';
 }

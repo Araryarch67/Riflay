@@ -61,6 +61,7 @@ import 'spotiflac_audio_source.dart';
 import 'spotify_audio_source.dart';
 import 'shuffle.dart';
 import 'memory_trim.dart';
+import 'connect/connect_rtc.dart';
 import 'youtube_audio_source.dart';
 import 'youtube_music_account.dart';
 import 'youtube_importer.dart';
@@ -2728,6 +2729,12 @@ class PlayerController extends ChangeNotifier {
     if (audio.dopActive && !t.isCueTrack && t.path != null && DsdFile.isDsdPath(t.path!)) {
       final dsd = DsdFile.read(t.path!);
       if (dsd != null && audio.dopFits(dsd.bitRate)) return DopAudioSource(dsd, tag: identity);
+    }
+    if (connectTrackParts(t) case final shared?) {
+      // A shared song streams from its owner's computer (Riflay Connect), never from a file here.
+      final rtc = ConnectRtc.instance;
+      if (rtc == null) throw StateError('Riflay Connect is not set up.');
+      return rtc.sourceFor(shared.peerId, shared.ref, tag: identity);
     }
     if (t.monochromeId != null || t.extensionId != null) {
       final local = downloadedCopy(t);

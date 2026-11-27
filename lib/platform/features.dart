@@ -54,6 +54,10 @@ abstract final class Features {
   /// Listen together (internet rooms everywhere; see [listenOnLan]).
   static bool get listenTogether => true;
 
+  /// Riflay Connect: any Riflay can control a desktop. Only a desktop can be the one controlled: it plays from its
+  /// own files and stays reachable while its window is open, which a phone's app can't promise in the background.
+  static bool get connectHost => Host.isWindows || Host.isLinux || Host.isMacOS;
+
   /// Listen together on the same Wi-Fi: finding and hosting sessions takes the local network's sockets, which a
   /// browser doesn't have. The web build meets over the internet (a secure WebSocket to the broker).
   static bool get listenOnLan => !Host.isWeb;

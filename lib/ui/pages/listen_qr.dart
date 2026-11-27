@@ -42,7 +42,14 @@ class ListenQrDialog extends StatelessWidget {
 
 /// Camera scanning on supported devices; QR image import also works on desktops.
 class ListenQrScanner extends StatefulWidget {
-  const ListenQrScanner({super.key});
+  const ListenQrScanner({super.key, this.parse = listenCodeFromQr, this.invalidMessage});
+
+  /// What a scanned text means to the caller: the value to return, or null when it isn't theirs. Riflay Connect
+  /// scans its own pairing links with this.
+  final String? Function(String text) parse;
+
+  /// Said when a QR was read but [parse] refused it; Listen together's own words when null.
+  final String Function()? invalidMessage;
 
   @override
   State<ListenQrScanner> createState() => _ListenQrScannerState();
@@ -59,14 +66,14 @@ class _ListenQrScannerState extends State<ListenQrScanner> {
     if (_done || !mounted) return;
     if (values.isEmpty) return;
     for (final value in values) {
-      final code = value == null ? null : listenCodeFromQr(value);
+      final code = value == null ? null : widget.parse(value);
       if (code != null) {
         _done = true;
         Navigator.of(context).pop(code);
         return;
       }
     }
-    setState(() => _error = tr.notASessionQr);
+    setState(() => _error = widget.invalidMessage?.call() ?? tr.notASessionQr);
   }
 
   Future<void> _image() async {
@@ -78,7 +85,7 @@ class _ListenQrScannerState extends State<ListenQrScanner> {
       final picked = await FilePicker.pickFiles(type: FileType.image);
       if (!mounted || _done || picked.isEmpty) return;
       final bytes = await picked.single.readAsBytes();
-      final code = await inBackground(() => listenCodeFromImage(bytes));
+      final code = await inBackground(() => qrTextFromImage(bytes));
       if (!mounted || _done) return;
       if (code == null) {
         setState(() => _error = tr.noSessionInImage);
