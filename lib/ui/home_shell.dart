@@ -1249,6 +1249,9 @@ class _HomeShellState extends State<HomeShell> with SingleTickerProviderStateMix
             // elsewhere it slides away, but Rail keeps it in sight.
             final barFloats = full;
             final barHides = full && !_fullHeightRail;
+            // The player bar stays too with the rail (sliding up whenever the pointer neared the foot got in the way),
+            // still over the player's picture, as one.
+            final playerBarHides = full && !_shortcutRail;
             final barHeight = _fullHeightRail ? AppTitleBar.railHeight : AppTitleBar.tallHeight;
             // Keyed: it moves between the column and the overlay without losing what's typed in it.
             final titleBar = AutoHideBar(
@@ -1266,7 +1269,7 @@ class _HomeShellState extends State<HomeShell> with SingleTickerProviderStateMix
               // In the bottom slot so floating snackbars stack above the player instead of covering it.
               bottomNavigationBar: AutoHideBar(
                 edge: AxisDirection.down,
-                enabled: full,
+                enabled: playerBarHides,
                 shown: _playerBarShown,
                 child: _ReportHeight(
                   height: _playerBarHeight,
