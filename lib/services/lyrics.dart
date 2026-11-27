@@ -200,7 +200,16 @@ class Lyrics {
         final c = pending[a].time.compareTo(pending[b].time);
         return c != 0 ? c : a.compareTo(b);
       });
-    final sorted = [for (final i in order) pending[i]];
+    // Rows after the first with the very same time and no word times are its pronunciation or translation (as
+    // Riflay saves them beside a download, and as many sites write them): folded into the line, not shown as lyrics.
+    // Not at 00:00, where a song's title and credits sit, and where lyrics with no real timing put every line.
+    final sorted = <_Pending>[];
+    for (final i in order) {
+      final row = pending[i];
+      final last = sorted.lastOrNull;
+      if (last != null && last.time == row.time && row.time > Duration.zero && row.words.isEmpty) continue;
+      sorted.add(row);
+    }
     final lines = <LyricLine>[];
     for (final (i, line) in sorted.indexed) {
       if (line.words.isEmpty) {

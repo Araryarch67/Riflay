@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 
 import '../ui/debug_switches.dart';
+import 'lyrics.dart';
 import 'romanizer.dart';
 
 import 'package:shared_preferences/shared_preferences.dart';
@@ -162,6 +163,37 @@ abstract final class LyricsTranslation {
       }
     }
     return out;
+  }
+
+  /// [lyrics] as an `.lrc` file to keep beside a downloaded song, each line followed by its pronunciation and its
+  /// translation (into the language last picked for lyrics) on lines of their own with the same time, as most players
+  /// show them; Riflay folds them back in when it reads the file ([Lyrics.parse]). When neither service answers, the
+  /// pronunciations worked out here are still written. Plain lyrics are written as they are.
+  static Future<String?> lrcWithExtras(Lyrics lyrics, {String? to, http.Client? client}) async {
+    final lrc = lyrics.toLrc();
+    if (lrc == null || lyrics.lines.isEmpty) return lrc;
+    final texts = [for (final l in lyrics.lines) l.text];
+    List<LineExtras> extras;
+    try {
+      // The language last picked for lyrics is a saved setting: read before it is used.
+      if (to == null) await load();
+      extras = await of(texts, to: to, client: client);
+    } catch (_) {
+      extras = [for (final t in texts) LineExtras(romanized: hasNonLatin(t) ? _useful(Romanizer.local(t), t) : null)];
+    }
+    // toLrc writes one row per line, each starting with the line's time.
+    final rows = lrc.split('\n');
+    if (rows.length != texts.length) return lrc;
+    final out = StringBuffer();
+    final stamp = RegExp(r'^\[\d+:\d{2}\.\d{2}\]');
+    for (final (i, row) in rows.indexed) {
+      out.writeln(row);
+      final time = stamp.stringMatch(row);
+      if (time == null) continue;
+      if (extras[i].romanized case final r?) out.writeln('$time$r');
+      if (extras[i].translation case final t?) out.writeln('$time$t');
+    }
+    return out.toString().trimRight();
   }
 
   /// Better Lyrics' translation service: translations only, no pronunciation.

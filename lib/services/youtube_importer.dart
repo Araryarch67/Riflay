@@ -20,6 +20,7 @@ import 'audio_engine.dart';
 import 'ffmpeg.dart';
 import 'flac_stream.dart';
 import 'lyrics.dart';
+import 'lyrics_translation.dart';
 import 'pcm_decoder.dart';
 import 'private_files.dart';
 import 'metadata.dart';
@@ -1693,7 +1694,8 @@ class YoutubeImporter extends ChangeNotifier {
     try {
       final song = Track.youtube(videoId: videoId, title: names.title, artist: names.artist, duration: length);
       final found = await LyricsService.forTrack(song).timeout(const Duration(seconds: 30));
-      return found.toLrc();
+      // With each line's pronunciation and translation, in the language last picked for lyrics.
+      return await LyricsTranslation.lrcWithExtras(found).timeout(const Duration(seconds: 20), onTimeout: found.toLrc);
     } catch (e) {
       debugPrint('Download: no lyrics saved: $e');
       return null;

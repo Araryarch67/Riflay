@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
+import 'package:riflay/services/lyrics.dart';
 import 'package:riflay/services/lyrics_translation.dart';
 
 void main() {
@@ -100,5 +101,43 @@ void main() {
     expect(extras.every((e) => e.translation != null), isTrue);
     // Romaji comes from Google only; when it blocks us, Better Lyrics still translates.
     if (extras.first.romanized != null) expect(extras.last.romanized, contains('sayonara'));
+  });
+
+  test(
+    'a downloaded .lrc has each line\'s pronunciation and translation under it, and reads back as the lyrics',
+    () async {
+      final lyrics = Lyrics.parse('[00:01.00]夜に駆ける\n[00:05.50]Baby, run', source: 'test');
+      final lrc = await LyricsTranslation.lrcWithExtras(
+        lyrics,
+        to: 'id',
+        client: MockClient(
+          (_) async => json(google('Berlari di malam hari\n0000\nSayang, lari', 'yoru ni kakeru 0000 Baby, run', 'ja')),
+        ),
+      );
+      expect(lrc!.split('\n'), [
+        '[00:01.00]夜に駆ける',
+        '[00:01.00]yoru ni kakeru',
+        '[00:01.00]Berlari di malam hari',
+        '[00:05.50]Baby, run',
+        '[00:05.50]Sayang, lari',
+      ]);
+      final back = Lyrics.parse(lrc, source: 'Lyrics file');
+      expect([for (final l in back.lines) l.text], ['夜に駆ける', 'Baby, run'], reason: 'folded back, not shown twice');
+    },
+  );
+
+  test('with no translation service reachable, the pronunciation worked out here is still saved', () async {
+    final lyrics = Lyrics.parse('[00:01.00]さくら', source: 'test');
+    final lrc = await LyricsTranslation.lrcWithExtras(
+      lyrics,
+      to: 'id',
+      client: MockClient((_) async => http.Response('down', 503)),
+    );
+    expect(lrc!.split('\n'), ['[00:01.00]さくら', '[00:01.00]sakura']);
+  });
+
+  test('a chorus stamped at different times stays: only rows at the very same time fold', () {
+    final back = Lyrics.parse('[00:10.00][00:50.00]La la la\n[00:20.00]Verse', source: 'test');
+    expect([for (final l in back.lines) l.text], ['La la la', 'Verse', 'La la la']);
   });
 }
