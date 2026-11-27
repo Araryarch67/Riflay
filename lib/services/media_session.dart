@@ -16,6 +16,7 @@ import 'language.dart';
 import 'lyrics.dart';
 import 'lyrics_translation.dart';
 import 'metadata.dart';
+import 'media_session/browse_tree.dart';
 import 'media_session/media_session_service.dart';
 import 'player_controller.dart';
 
@@ -83,6 +84,30 @@ class AudioServiceAdapter implements MediaSessionAdapter {
   }
 }
 
+class _ControllerLibrary implements BrowseLibrary {
+  _ControllerLibrary(this._c);
+
+  final PlayerController _c;
+
+  @override
+  List<Collection> get playlists => [for (final p in _c.playlists) _c.playlistCollection(p)];
+
+  @override
+  List<Track> get recent => _c.recentlyPlayed;
+
+  @override
+  Future<List<Track>> liked() async {
+    if (!_c.ytMusic.isSignedIn) return const [];
+    try {
+      return (await _c.ytMusic.library()).liked;
+    } catch (e) {
+      // Offline in the car: an empty folder beats an error screen.
+      debugPrint('Liked music for the car failed: $e');
+      return const [];
+    }
+  }
+}
+
 /// audio_service's handler: what Android's notification, the lock screen, Control Center, MPRIS and the browser
 /// show, and where their buttons arrive. Shows [MediaSessionState]s; every button goes to [MediaSessionService].
 class MediaSession extends BaseAudioHandler with SeekHandler {
@@ -120,6 +145,9 @@ class MediaSession extends BaseAudioHandler with SeekHandler {
   static const _lyricsKey = 'lyrics.lockScreen';
 
   final PlayerController _c;
+
+  /// The folders a car's browser lists (Android Auto).
+  late final BrowseTree _tree = BrowseTree(_ControllerLibrary(_c));
 
   /// Where the system's buttons go: [MediaSessionService.dispatch].
   void Function(MediaCommand) _send;
@@ -454,6 +482,17 @@ class MediaSession extends BaseAudioHandler with SeekHandler {
 
   @override
   Future<void> skipToPrevious() async => _send(const MediaCommand.previous());
+
+  @override
+  Future<List<MediaItem>> getChildren(String parentMediaId, [Map<String, dynamic>? options]) =>
+      _tree.children(parentMediaId);
+
+  /// A song picked on the car's screen: its list is queued from that song, on the same player as the app's buttons.
+  @override
+  Future<void> playFromMediaId(String mediaId, [Map<String, dynamic>? extras]) async {
+    final pick = await _tree.resolve(mediaId);
+    if (pick != null) await _c.playList(pick.tracks, pick.index, from: pick.from);
+  }
 
   @override
   Future<dynamic> customAction(String name, [Map<String, dynamic>? extras]) async => switch (name) {

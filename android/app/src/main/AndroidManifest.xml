@@ -158,6 +158,11 @@
                 android:name="android.support.FILE_PROVIDER_PATHS"
                 android:resource="@xml/update_file_paths" />
         </provider>
+        <!-- Android Auto: lists Riflay among the media apps; it browses and controls through the AudioService
+             MediaBrowserService above (BrowseTree). Media only, no template apps. -->
+        <meta-data
+            android:name="com.google.android.gms.car.application"
+            android:resource="@xml/automotive_app_desc" />
         <!-- Impeller's Vulkan backend fails to build shader pipelines on some
              Adreno drivers (logcat: "AdrenoVK: Pipeline create failed"). -->
         <meta-data
