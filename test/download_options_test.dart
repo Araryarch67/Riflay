@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:riflay/models/track.dart';
 import 'package:riflay/services/download_prefs.dart';
 import 'package:riflay/ui/download_options.dart';
+import 'package:riflay/ui/download_source_dialog.dart';
 import 'package:riflay/ui/widgets/app_dialog.dart';
 import 'package:riflay/ui/widgets/skeleton.dart';
 
@@ -23,6 +24,7 @@ Future<Future<DownloadChoice?>> _open(
   bool ffmpeg = true,
   Track? track,
   String? folder,
+  Widget Function(BuildContext)? sourceRow,
 }) async {
   tester.view.physicalSize = const Size(600, 1600);
   tester.view.devicePixelRatio = 1;
@@ -48,6 +50,7 @@ Future<Future<DownloadChoice?>> _open(
       canReencode: ffmpeg,
       track: track,
       folder: folder,
+      sourceRow: sourceRow,
     ),
   );
   await tester.pump();
@@ -204,5 +207,24 @@ void main() {
     await tester.tap(find.byIcon(Icons.close_rounded));
     await tester.pump(const Duration(milliseconds: 400));
     expect(await result, isNull, reason: 'the cross backs out like Cancel');
+  });
+
+  testWidgets("a single song's dialog shows where it downloads from, under the song", (tester) async {
+    final song = Track(id: 'a', uri: Uri.parse('https://youtu.be/a'), title: 'Oh! Asmara', artist: 'Kobo Kanaeru');
+    await _open(
+      tester,
+      initial: const DownloadChoice(DownloadFormat.opus),
+      track: song,
+      sourceRow: (_) => const Text('source row'),
+    );
+    final row = tester.getRect(find.text('source row'));
+    expect(row.top, greaterThan(tester.getRect(find.text('Oh! Asmara')).bottom), reason: 'under the song card');
+  });
+
+  test('the sources to pick are YouTube Music first, and the one in use even when it can no longer download', () {
+    final options = downloadSourceOptions('qobuz');
+    expect(options.first, ('youtube', 'YouTube Music'));
+    expect(options.map((o) => o.$1), contains('qobuz'));
+    expect(downloadSourceOptions('youtube').map((o) => o.$1).where((id) => id == 'youtube'), hasLength(1));
   });
 }

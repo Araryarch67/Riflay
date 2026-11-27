@@ -88,7 +88,8 @@ void main() {
       await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 20)));
       await tester.pumpAndSettle();
     }
-    expect(find.text('Download source'), findsNothing);
+    // The match dialog's own Source row (to choose another source), not a dialog of its own.
+    expect(find.text('Download source'), findsOneWidget);
     expect(find.text('Find a match on Monochrome'), findsOneWidget);
     expect(find.text("Couldn't search this source. Try again or choose another source."), findsOneWidget);
     expect(player.youtube.jobs, isEmpty);

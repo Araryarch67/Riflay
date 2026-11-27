@@ -13,6 +13,7 @@ import '../../services/sources/music_sources.dart';
 import '../../services/video_download.dart';
 import '../../services/youtube_importer.dart';
 import '../../services/ytdlp.dart';
+import '../download_source_dialog.dart' show downloadSourceOptions;
 import '../widgets/menus.dart';
 import 'sound_settings.dart';
 import '../../services/language.dart';
@@ -107,18 +108,7 @@ class _DownloadSettingsState extends State<DownloadSettings> {
                 title: Text(tr.downloadSource),
                 control: OptionPicker<String>(
                   value: _prefs.source,
-                  options: [
-                    ('youtube', 'YouTube Music'),
-                    if (MusicSources.instance.monochrome || _prefs.source == 'monochrome') ('monochrome', 'Monochrome'),
-                    for (final p in Spotiflac.instance.searchProviders)
-                      if (p['has_download_provider'] == true) (p['id'] as String, Spotiflac.instance.nameOf(p['id'])),
-                    if (_prefs.source != 'youtube' &&
-                        _prefs.source != 'monochrome' &&
-                        !Spotiflac.instance.searchProviders.any(
-                          (p) => p['id'] == _prefs.source && p['has_download_provider'] == true,
-                        ))
-                      (_prefs.source, Spotiflac.instance.nameOf(_prefs.source)),
-                  ],
+                  options: downloadSourceOptions(_prefs.source),
                   onChanged: _prefs.setSource,
                 ),
               ),

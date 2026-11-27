@@ -57,48 +57,133 @@ Future<bool> downloadExtensionTracks(
   return added > 0;
 }
 
-/// Chooses an audio provider for a single YouTube song. The default provider
-/// retains its existing format dialog and preferences.
+/// Where a song can be downloaded from, as (id, name): YouTube Music, Monochrome when it is set up, and each
+/// SpotiFLAC source that can download; [current] stays on the list even when it no longer can. Settings and the
+/// download dialog list the same.
+List<(String, String)> downloadSourceOptions(String current) {
+  final spotiflac = [
+    for (final p in Spotiflac.instance.searchProviders)
+      if (p['has_download_provider'] == true) p['id'] as String,
+  ];
+  return [
+    ('youtube', 'YouTube Music'),
+    if (MusicSources.instance.monochrome || current == 'monochrome') ('monochrome', 'Monochrome'),
+    for (final id in spotiflac) (id, Spotiflac.instance.nameOf(id)),
+    if (current != 'youtube' && current != 'monochrome' && !spotiflac.contains(current))
+      (current, Spotiflac.instance.nameOf(current)),
+  ];
+}
+
+/// Monochrome's and SpotiFLAC's sources, loaded (once each, by their own services); one that fails is left off.
+Future<void> _loadSources() =>
+    Future.wait<void>([MusicSources.instance.load().catchError((_) {}), Spotiflac.instance.load().catchError((_) {})]);
+
+/// The download dialogs' Source row: where the song comes from, changed in place. Shown at once with what is known,
+/// the other sources added as they load.
+class _SourceRow extends StatefulWidget {
+  const _SourceRow({required this.value, required this.onChanged});
+
+  final String value;
+  final ValueChanged<String> onChanged;
+
+  @override
+  State<_SourceRow> createState() => _SourceRowState();
+}
+
+class _SourceRowState extends State<_SourceRow> {
+  @override
+  void initState() {
+    super.initState();
+    _loadSources().then((_) {
+      if (mounted) setState(() {});
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) => Row(
+    children: [
+      Expanded(child: Text(tr.downloadSource, style: Theme.of(context).textTheme.titleSmall)),
+      OptionPicker<String>(
+        value: widget.value,
+        options: downloadSourceOptions(widget.value),
+        onChanged: widget.onChanged,
+      ),
+    ],
+  );
+}
+
+/// Downloads a single song, from the source last picked: YouTube with its format dialog, or another source with
+/// its match dialog. Either dialog has a Source row; picking another source there closes it for that source's
+/// dialog, and is kept for next time.
 Future<bool> downloadFromSource(
   BuildContext context,
   PlayerController player,
   Track origin, {
   bool force = false,
 }) async {
-  await DownloadPrefs.instance.load();
-  if (!context.mounted) return false;
-  final source = DownloadPrefs.instance.source;
-  if (source == 'youtube') {
-    final choice = await chooseDownload(context, force: force, videoId: origin.videoId, track: origin);
-    if (choice == null) return false;
-    return player.youtube.enqueueTracks([origin], choice: choice) > 0;
+  final prefs = DownloadPrefs.instance;
+  await prefs.load();
+  var source = prefs.source;
+  // Another source is checked before its dialog; YouTube's opens at once, its Source row filling in as the other
+  // sources load.
+  if (source != 'youtube') await _loadSources();
+  while (true) {
+    String? switchTo;
+    final current = source;
+    Widget sourceRow(BuildContext dialog) => _SourceRow(
+      value: current,
+      onChanged: (picked) {
+        if (picked == current) return;
+        switchTo = picked;
+        Navigator.of(dialog).pop();
+      },
+    );
+    if (!context.mounted) return false;
+    if (source == 'youtube') {
+      final choice = await chooseDownload(
+        context,
+        force: force,
+        videoId: origin.videoId,
+        track: origin,
+        sourceRow: sourceRow,
+      );
+      if (switchTo case final next?) {
+        source = next;
+        await DownloadPrefs.instance.setSource(next);
+        continue;
+      }
+      if (choice == null) return false;
+      return player.youtube.enqueueTracks([origin], choice: choice) > 0;
+    }
+    await _loadSources();
+    final available = source == 'monochrome'
+        ? MusicSources.instance.monochrome
+        : Spotiflac.instance.searchProviders.any((p) => p['id'] == source && p['has_download_provider'] == true);
+    if (!context.mounted) return false;
+    if (!available) {
+      final name = source == 'monochrome' ? 'Monochrome' : Spotiflac.instance.nameOf(source);
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(tr.sourceUnavailable(name))));
+      return false;
+    }
+    final match = await showDialog<({Track track, String? quality})>(
+      context: context,
+      builder: (_) => _MatchDialog(origin: origin, source: source, sourceRow: sourceRow),
+    );
+    if (switchTo case final next?) {
+      source = next;
+      await DownloadPrefs.instance.setSource(next);
+      continue;
+    }
+    if (match == null) return false;
+    return player.youtube.enqueueTracks([match.track], youtubeOrigin: origin, extensionQuality: match.quality) > 0;
   }
-  if (source == 'monochrome') {
-    await MusicSources.instance.load();
-  } else {
-    await Spotiflac.instance.load();
-  }
-  if (!context.mounted) return false;
-  final available = source == 'monochrome'
-      ? MusicSources.instance.monochrome
-      : Spotiflac.instance.searchProviders.any((p) => p['id'] == source && p['has_download_provider'] == true);
-  if (!available) {
-    final name = source == 'monochrome' ? 'Monochrome' : Spotiflac.instance.nameOf(source);
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(tr.sourceUnavailable(name))));
-    return false;
-  }
-  final match = await showDialog<({Track track, String? quality})>(
-    context: context,
-    builder: (_) => _MatchDialog(origin: origin, source: source),
-  );
-  if (match == null) return false;
-  return player.youtube.enqueueTracks([match.track], youtubeOrigin: origin, extensionQuality: match.quality) > 0;
 }
 
 class _MatchDialog extends StatefulWidget {
-  const _MatchDialog({required this.origin, required this.source});
+  const _MatchDialog({required this.origin, required this.source, this.sourceRow});
   final Track origin;
   final String source;
+  final Widget Function(BuildContext dialog)? sourceRow;
   @override
   State<_MatchDialog> createState() => _MatchDialogState();
 }
@@ -162,6 +247,7 @@ class _MatchDialogState extends State<_MatchDialog> {
       children: [
         Text(widget.origin.title, style: Theme.of(context).textTheme.titleMedium),
         Text(tr.downloadMatchReview),
+        if (widget.sourceRow case final row?) ...[const SizedBox(height: 12), row(context)],
         const SizedBox(height: 12),
         TextField(
           controller: query,

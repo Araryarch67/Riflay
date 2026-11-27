@@ -27,6 +27,7 @@ Future<DownloadChoice?> chooseDownload(
   bool force = false,
   String? videoId,
   Track? track,
+  Widget Function(BuildContext dialog)? sourceRow,
 }) async {
   final prefs = DownloadPrefs.instance;
   await prefs.load();
@@ -51,6 +52,7 @@ Future<DownloadChoice?> chooseDownload(
       video: video,
       track: track,
       folder: folder,
+      sourceRow: sourceRow,
     ),
   );
 }
@@ -86,9 +88,13 @@ class DownloadOptionsDialog extends StatefulWidget {
     this.canReencode,
     this.track,
     this.folder,
+    this.sourceRow,
   });
 
   final DownloadChoice initial;
+
+  /// Where the song is downloaded from, picked here (a single song's download); built with the dialog's context.
+  final Widget Function(BuildContext dialog)? sourceRow;
 
   /// The song, shown as a card under the title; null (a whole playlist) shows none.
   final Track? track;
@@ -428,6 +434,7 @@ class _DownloadOptionsDialogState extends State<DownloadOptionsDialog> {
       content: DialogBody(
         children: [
           if (track != null) _trackCard(track),
+          if (widget.sourceRow case final row?) row(context),
           if (_showKind)
             PillTabs<DownloadKind>(
               values: DownloadKind.values,
