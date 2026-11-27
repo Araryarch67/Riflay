@@ -1780,6 +1780,16 @@
   "thisSong": "lagu ini",
   "addMusicFolder": "Tambah folder musik",
   "couldntReachDevice": "Tidak bisa menghubungi {device}",
+  "multiroom": "Putar di beberapa perangkat",
+  "multiroomPlayOn": "Putar di {count} perangkat",
+  "@multiroomPlayOn": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "multiroomNote": "Pilih dua perangkat atau lebih. Masing-masing mulai sendiri, jadi antar ruangan bisa terdengar sedikit tidak serempak.",
   "presetClassicNote": "Pemutar seperti biasanya, sampul berdenyut mengikuti musik",
   "presetStackedNote": "Sampul sebagai halaman, tombol menyatu, bilah tebal, dan tombol Putar lebar",
   "presetKawaiiNote": "Sampul memudar ke halaman, dengan ikon polos, garis bergelombang, dan volume di balik tombol",

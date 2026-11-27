@@ -3484,16 +3484,19 @@ class PlayerController extends ChangeNotifier {
   }
 
   /// Plays on [renderer] from where this device is, or back here (null).
-  Future<void> castTo(CastTarget? renderer) async {
-    if (renderer == null) return _stopCasting();
-    if (cast.target == renderer) return;
+  Future<void> castTo(CastTarget? renderer) => castToGroup(renderer == null ? const [] : [renderer]);
+
+  /// Plays on all of [devices] at once (multiroom); empty means back here.
+  Future<void> castToGroup(List<CastTarget> devices) async {
+    if (devices.isEmpty) return _stopCasting();
+    if (CastGroup.same(cast.group, devices)) return;
     final from = position;
     final wasPlaying = isPlaying;
     try {
-      await cast.connect(renderer);
+      await cast.connectGroup(devices);
     } catch (e) {
-      debugPrint('Casting to ${renderer.name} failed: $e');
-      _errors.add(tr.couldntReachDevice(renderer.name));
+      debugPrint('Casting to ${devices.first.name} failed: $e');
+      _errors.add(tr.couldntReachDevice(devices.first.name));
       return;
     }
     await player.pause();

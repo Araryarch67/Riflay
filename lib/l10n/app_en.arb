@@ -3291,6 +3291,16 @@
       }
     }
   },
+  "multiroom": "Play on several devices",
+  "multiroomPlayOn": "Play on {count} devices",
+  "@multiroomPlayOn": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "multiroomNote": "Pick two or more devices. They start on their own, so rooms can sound slightly out of step.",
   "presetClassicNote": "The player as it has always been, the cover pulsing with the music",
   "presetStackedNote": "The cover as the page, joined buttons, a thick bar and a wide Play button",
   "presetKawaiiNote": "The cover fades into the page, with plain icons, a wavy line and the volume behind a button",

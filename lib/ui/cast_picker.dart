@@ -21,7 +21,7 @@ class CastButton extends StatelessWidget {
     final c = PlayerScope.of(context);
     final target = c.cast.target;
     return IconButton(
-      tooltip: target == null ? tr.playOnDevice : tr.playingOn(target.name),
+      tooltip: target == null ? tr.playOnDevice : tr.playingOn(c.cast.group.map((t) => t.name).join(', ')),
       color: target == null ? color : AppColors.accent,
       onPressed: () => showCastPicker(context),
       icon: Icon(target == null ? Icons.cast_rounded : Icons.cast_connected_rounded, size: size),
@@ -61,6 +61,11 @@ class _CastPicker extends StatefulWidget {
 
 class _CastPickerState extends State<_CastPicker> {
   CastTarget? _connecting;
+  bool _connectingGroup = false;
+
+  /// Multiroom: devices ticked so far, sent to together by the button.
+  bool _multi = false;
+  List<CastTarget> _chosen = const [];
 
   @override
   void initState() {
@@ -79,6 +84,15 @@ class _CastPickerState extends State<_CastPicker> {
     setState(() => _connecting = null);
     // Stay open after a failure: the message shows and another can be tried.
     if (c.cast.target == renderer) Navigator.of(context).pop();
+  }
+
+  Future<void> _playOnGroup() async {
+    final c = PlayerScope.read(context);
+    setState(() => _connectingGroup = true);
+    await c.castToGroup(_chosen);
+    if (!mounted) return;
+    setState(() => _connectingGroup = false);
+    if (CastGroup.same(c.cast.group, _chosen)) Navigator.of(context).pop();
   }
 
   @override
@@ -110,7 +124,7 @@ class _CastPickerState extends State<_CastPicker> {
             : selected
             ? Icon(Icons.check_rounded, color: AppColors.accent)
             : null,
-        onTap: _connecting != null || selected ? null : onTap,
+        onTap: _connecting != null || _connectingGroup || (selected && !_multi) ? null : onTap,
       );
     }
 
@@ -125,16 +139,36 @@ class _CastPickerState extends State<_CastPicker> {
         tile(
           icon: Host.isAndroid || Host.isIOS ? Icons.smartphone_rounded : Icons.computer_rounded,
           name: here,
-          selected: !c.casting,
-          onTap: () => _pick(null),
+          selected: !c.casting && !_multi,
+          onTap: () => _multi ? setState(() => _multi = false) : _pick(null),
         ),
         for (final r in cast.devices)
           tile(
             icon: r is AirPlayTarget ? Icons.speaker_group_rounded : Icons.speaker_rounded,
             name: r.name,
-            selected: cast.target == r,
+            selected: _multi ? _chosen.contains(r) : cast.group.contains(r),
             renderer: r,
-            onTap: () => _pick(r),
+            onTap: () => _multi ? setState(() => _chosen = CastGroup.toggle(_chosen, r)) : _pick(r),
+          ),
+        if (cast.devices.length > 1)
+          SwitchListTile(
+            title: Text(tr.multiroom),
+            subtitle: _multi ? Text(tr.multiroomNote) : null,
+            value: _multi,
+            onChanged: _connecting != null || _connectingGroup
+                ? null
+                : (on) => setState(() {
+                    _multi = on;
+                    _chosen = on ? [...cast.group] : const [];
+                  }),
+          ),
+        if (_multi)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(24, 4, 24, 8),
+            child: FilledButton(
+              onPressed: _chosen.length < 2 || _connectingGroup ? null : _playOnGroup,
+              child: Text(tr.multiroomPlayOn(_chosen.length)),
+            ),
           ),
         Padding(
           padding: const EdgeInsets.fromLTRB(24, 8, 24, 20),

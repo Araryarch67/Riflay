@@ -10725,6 +10725,24 @@ abstract class AppLocalizations {
   /// **'Couldn\'t reach {device}'**
   String couldntReachDevice(String device);
 
+  /// No description provided for @multiroom.
+  ///
+  /// In en, this message translates to:
+  /// **'Play on several devices'**
+  String get multiroom;
+
+  /// No description provided for @multiroomPlayOn.
+  ///
+  /// In en, this message translates to:
+  /// **'Play on {count} devices'**
+  String multiroomPlayOn(int count);
+
+  /// No description provided for @multiroomNote.
+  ///
+  /// In en, this message translates to:
+  /// **'Pick two or more devices. They start on their own, so rooms can sound slightly out of step.'**
+  String get multiroomNote;
+
   /// No description provided for @presetClassicNote.
   ///
   /// In en, this message translates to:
