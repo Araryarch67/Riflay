@@ -2386,6 +2386,21 @@ class AppLocalizationsEn extends AppLocalizations {
   String get audioLab => 'Audio Lab';
 
   @override
+  String get expandedMode => 'Mode';
+
+  @override
+  String get modeCover => 'Cover';
+
+  @override
+  String get modeVinyl => 'Vinyl';
+
+  @override
+  String get modeAmbient => 'Clock';
+
+  @override
+  String get modeHifi => 'Hi-Fi';
+
+  @override
   String get labResponse => 'Frequency response';
 
   @override

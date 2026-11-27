@@ -27,6 +27,7 @@ import 'more_sheet.dart';
 import 'player_common.dart' show ArtistLinks;
 import 'player_glass.dart';
 import 'player_parts.dart';
+import 'expanded_modes.dart' show DeskClock, VinylDeck;
 import 'player_styles_page.dart';
 import 'video_full_view.dart';
 
@@ -288,7 +289,7 @@ class NowPlayingPage extends StatelessWidget {
                                 ],
                               );
                               final topBar = topBarFor(more: true);
-                              Widget cover(double size, {double radius = 8}) => NowPlayingCover(
+                              Widget coverArt(double size, {double radius = 8}) => NowPlayingCover(
                                 child: Hero(
                                   tag: 'now-playing-art',
                                   child: DecoratedBox(
@@ -306,6 +307,22 @@ class NowPlayingPage extends StatelessWidget {
                                   ),
                                 ),
                               );
+                              // Cover: Vinyl and Clock put a turning record (its arm beside it) or a desk clock in the
+                              // cover's square, in every layout.
+                              Widget cover(double size, {double radius = 8}) =>
+                                  switch (LayoutPrefs.instance.playerCover) {
+                                    PlayerCover.vinyl => SizedBox.square(
+                                      dimension: size,
+                                      child: Center(
+                                        child: VinylDeck(track: track, size: size / VinylDeck.armRoom),
+                                      ),
+                                    ),
+                                    PlayerCover.clock => SizedBox.square(
+                                      dimension: size,
+                                      child: Center(child: DeskClock(size: size * 0.42)),
+                                    ),
+                                    _ => coverArt(size, radius: radius),
+                                  };
                               final info = Row(
                                 children: [
                                   Expanded(

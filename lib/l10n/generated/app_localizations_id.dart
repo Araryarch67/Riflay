@@ -2381,6 +2381,21 @@ class AppLocalizationsId extends AppLocalizations {
   String get audioLab => 'Audio Lab';
 
   @override
+  String get expandedMode => 'Mode';
+
+  @override
+  String get modeCover => 'Cover';
+
+  @override
+  String get modeVinyl => 'Vinyl';
+
+  @override
+  String get modeAmbient => 'Jam';
+
+  @override
+  String get modeHifi => 'Hi-Fi';
+
+  @override
   String get labResponse => 'Respons frekuensi';
 
   @override

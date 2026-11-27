@@ -391,13 +391,21 @@ enum PlayerCover {
   square,
   flower,
   background,
-  logo;
+  logo,
+
+  /// The cover as a record's label, turning while the song plays, a tone arm on it.
+  vinyl,
+
+  /// A desk clock where the cover was.
+  clock;
 
   String get label => switch (this) {
     logo => tr.coverAppLogo,
     square => tr.shapeSquare,
     flower => tr.shapeFlower,
     background => tr.coverBackground,
+    vinyl => tr.modeVinyl,
+    clock => tr.modeAmbient,
   };
 }
 

@@ -2332,6 +2332,21 @@ class AppLocalizationsJa extends AppLocalizations {
   String get audioLab => 'オーディオラボ';
 
   @override
+  String get expandedMode => 'モード';
+
+  @override
+  String get modeCover => 'カバー';
+
+  @override
+  String get modeVinyl => 'レコード';
+
+  @override
+  String get modeAmbient => '時計';
+
+  @override
+  String get modeHifi => 'Hi-Fi';
+
+  @override
   String get labResponse => '周波数特性';
 
   @override

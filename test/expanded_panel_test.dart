@@ -8,6 +8,9 @@ import 'package:riflay/services/lyrics.dart';
 import 'package:riflay/services/player_controller.dart';
 import 'package:riflay/ui/pages/equalizer_page.dart';
 import 'package:riflay/ui/pages/lyrics_page.dart';
+import 'package:flutter/services.dart';
+import 'package:riflay/services/layout_prefs.dart';
+import 'package:riflay/ui/player/expanded_modes.dart';
 import 'package:riflay/ui/player/full_screen_player.dart';
 import 'package:riflay/ui/player/now_playing_page.dart';
 import 'package:riflay/ui/shell_scope.dart';
@@ -57,7 +60,10 @@ Future<_SongPlayer> _show(WidgetTester tester, Widget page, Size size, {required
 }
 
 void main() {
-  tearDown(() => expandedPlayerPanel.value = ExpandedPanel.none);
+  tearDown(() {
+    expandedPlayerPanel.value = ExpandedPanel.none;
+    expandedMode.value = ExpandedMode.cover;
+  });
 
   testWidgets('expanded player: Lyrics and Equalizer toggle the same side panel', (tester) async {
     final dir = Directory.systemTemp.createTempSync('riflay-panel-test');
@@ -138,4 +144,59 @@ void main() {
     await tester.pumpWidget(const SizedBox());
     await tester.runAsync(() async => c.dispose());
   });
+
+  testWidgets('expanded player modes: each opens from its key, and every one but Lyrics takes Lyrics beside it', (
+    tester,
+  ) async {
+    final dir = Directory.systemTemp.createTempSync('riflay-modes-test');
+    UserLyrics.dirOverride = dir;
+    addTearDown(() {
+      UserLyrics.dirOverride = null;
+      dir.deleteSync(recursive: true);
+    });
+    SharedPreferences.setMockInitialValues({'library.v1': jsonEncode(<Object>[])});
+    final player = _SongPlayer();
+    await tester.runAsync(() => UserLyrics.save(player.track, '[00:00.00]Some words'));
+    final c = await _show(tester, const Scaffold(body: FullScreenPlayer()), const Size(1400, 800), compact: false);
+    tester.takeException();
+    for (final (i, mode) in ExpandedMode.values.indexed) {
+      await tester.sendKeyEvent(LogicalKeyboardKey(LogicalKeyboardKey.digit1.keyId + i));
+      await tester.pump(const Duration(milliseconds: 300));
+      expect(expandedMode.value, mode, reason: 'key ${i + 1}');
+      expect(tester.takeException(), isNull, reason: '$mode');
+    }
+    expect(find.byType(LyricsView), findsNothing, reason: 'Up next, with no panel');
+
+    expandedMode.value = ExpandedMode.vinyl;
+    await tester.pump();
+    expect(find.byType(VinylDeck), findsOneWidget);
+    await tester.tap(find.byTooltip('Lyrics'));
+    await tester.pump();
+    expect(find.byType(VinylDeck), findsOneWidget, reason: 'the record stays, the lyrics beside it');
+    expect(find.byType(LyricsView), findsOneWidget);
+
+    expandedMode.value = ExpandedMode.lyrics;
+    await tester.pump();
+    expect(find.byType(LyricsView), findsOneWidget, reason: 'one, not one beside another');
+    expect(find.byTooltip('Hide lyrics'), findsNothing, reason: 'no panel buttons in the Lyrics mode');
+    expect(tester.takeException(), isNull);
+
+    await tester.pumpWidget(const SizedBox());
+    await tester.runAsync(() async => c.dispose());
+  });
+
+  for (final (cover, widget) in [(PlayerCover.vinyl, VinylDeck), (PlayerCover.clock, DeskClock)]) {
+    testWidgets('phone Now Playing: Cover ${cover.name} puts a ${widget.toString()} where the cover was', (
+      tester,
+    ) async {
+      SharedPreferences.setMockInitialValues({'library.v1': jsonEncode(<Object>[])});
+      await tester.runAsync(() => LayoutPrefs.instance.setPlayerCover(cover));
+      addTearDown(() async => tester.runAsync(() => LayoutPrefs.instance.setPlayerCover(PlayerCover.flower)));
+      final c = await _show(tester, const NowPlayingPage(), const Size(400, 860), compact: true);
+      expect(find.byType(widget), findsOneWidget);
+      expect(tester.takeException(), isNull);
+      await tester.pumpWidget(const SizedBox());
+      await tester.runAsync(() async => c.dispose());
+    });
+  }
 }

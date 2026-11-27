@@ -4461,6 +4461,36 @@ abstract class AppLocalizations {
   /// **'Audio Lab'**
   String get audioLab;
 
+  /// No description provided for @expandedMode.
+  ///
+  /// In en, this message translates to:
+  /// **'Mode'**
+  String get expandedMode;
+
+  /// No description provided for @modeCover.
+  ///
+  /// In en, this message translates to:
+  /// **'Cover'**
+  String get modeCover;
+
+  /// No description provided for @modeVinyl.
+  ///
+  /// In en, this message translates to:
+  /// **'Vinyl'**
+  String get modeVinyl;
+
+  /// No description provided for @modeAmbient.
+  ///
+  /// In en, this message translates to:
+  /// **'Clock'**
+  String get modeAmbient;
+
+  /// No description provided for @modeHifi.
+  ///
+  /// In en, this message translates to:
+  /// **'Hi-Fi'**
+  String get modeHifi;
+
   /// No description provided for @labResponse.
   ///
   /// In en, this message translates to:
