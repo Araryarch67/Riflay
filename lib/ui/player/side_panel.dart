@@ -164,7 +164,12 @@ class NowPlayingSidePanel extends StatelessWidget {
                                         ),
                                       ],
                                     ),
-                                    TrackRow(track: next, onTap: () => c.playQueueItem(next), marquee: true),
+                                    TrackRow(
+                                      track: next,
+                                      onTap: () => c.playQueueItem(next),
+                                      marquee: true,
+                                      slim: true,
+                                    ),
                                   ],
                                 ),
                               ),
@@ -481,7 +486,7 @@ class _HeroPanel extends StatelessWidget {
                         ],
                       ),
                       if (next != null)
-                        TrackRow(track: next, onTap: () => c.playQueueItem(next), marquee: true)
+                        TrackRow(track: next, onTap: () => c.playQueueItem(next), marquee: true, slim: true)
                       else
                         Padding(
                           padding: const EdgeInsets.fromLTRB(8, 4, 8, 8),
