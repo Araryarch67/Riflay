@@ -608,17 +608,17 @@ class LayoutSettings extends StatelessWidget {
                   value: p.keepPhoneNavOpen,
                   onChanged: p.setKeepPhoneNavOpen,
                 ),
-              if (Features.desktopLayout)
-                SettingTile(
-                  icon: Icons.dashboard_customize_outlined,
-                  title: Text(tr.desktopLayout),
-                  subtitle: Text(tr.desktopLayoutHint, style: muted),
-                  control: OptionPicker<DesktopLayout>(
-                    value: p.desktopLayout,
-                    options: [for (final v in DesktopLayout.values) (v, v.label)],
-                    onChanged: p.applyDesktopLayout,
-                  ),
+              // On phones too: the preset also sets Home and Search (greeting, section icons, centred search).
+              SettingTile(
+                icon: Icons.dashboard_customize_outlined,
+                title: Text(tr.desktopLayout),
+                subtitle: Text(tr.desktopLayoutHint, style: muted),
+                control: OptionPicker<DesktopLayout>(
+                  value: p.desktopLayout,
+                  options: [for (final v in DesktopLayout.values) (v, v.label)],
+                  onChanged: p.applyDesktopLayout,
                 ),
+              ),
               if (Features.desktopLayout)
                 SwitchListTile(
                   secondary: const Icon(Icons.vertical_split_outlined),
