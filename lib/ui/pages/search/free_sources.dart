@@ -67,7 +67,7 @@ class MonochromeSection extends StatelessWidget {
                   itemCount: tracks.length,
                   itemBuilder: (context, i) => TrackRow(
                     track: tracks[i],
-                    onTap: () => PlayerScope.read(context).playList(tracks, i, from: label),
+                    onTap: () => playSearchHit(PlayerScope.read(context), tracks[i], from: label),
                   ),
                 ),
               ),

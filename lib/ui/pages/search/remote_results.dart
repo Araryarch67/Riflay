@@ -19,7 +19,7 @@ import '../../../services/language.dart';
 void openSearchHit(BuildContext context, SearchHit hit) {
   final c = PlayerScope.read(context);
   if (hit.track case final t?) {
-    c.playList([t], 0, from: tr.navSearch);
+    playSearchHit(c, t, from: tr.navSearch);
   } else {
     openRemotePlaylist(context, hit.collection!);
   }
@@ -155,7 +155,7 @@ class TopAndSongs extends StatelessWidget {
                 TrackRow(
                   track: t,
                   showAlbum: false,
-                  onTap: () => c.playList(songs, i, from: tr.ytSearchSource),
+                  onTap: () => playSearchHit(c, t, from: tr.ytSearchSource),
                 ),
               ),
           ],
@@ -316,7 +316,7 @@ class YoutubeSongResults extends StatelessWidget {
                     itemBuilder: (context, i) => TrackRow(
                       track: previous[i],
                       showAlbum: false,
-                      onTap: () => c.playList(previous, i, from: tr.ytSearchSource),
+                      onTap: () => playSearchHit(c, previous[i], from: tr.ytSearchSource),
                     ),
                   ),
                 ),
@@ -338,7 +338,7 @@ class YoutubeSongResults extends StatelessWidget {
               TrackRow(
                 track: tracks[i],
                 showAlbum: false,
-                onTap: () => c.playList(tracks, i, from: tr.ytSearchSource),
+                onTap: () => playSearchHit(c, tracks[i], from: tr.ytSearchSource),
               ),
             ),
           ),
@@ -408,7 +408,7 @@ class VideoResults extends StatelessWidget {
                   TrackRow(
                     track: tracks[i],
                     showAlbum: false,
-                    onTap: () => c.playList(tracks, i, from: tr.ytVideosSource),
+                    onTap: () => playSearchHit(c, tracks[i], from: tr.ytVideosSource),
                   ),
                 );
               },

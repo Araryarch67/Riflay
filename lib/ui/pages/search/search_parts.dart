@@ -1,10 +1,16 @@
 import 'package:flutter/material.dart';
 
+import '../../../models/track.dart';
 import '../../../services/layout_prefs.dart';
+import '../../../services/player_controller.dart';
 import '../../shell_scope.dart';
 import '../../theme.dart';
 import '../../widgets/smooth_scroll.dart';
 import '../../widgets/skeleton.dart';
+
+/// A song picked from search plays on its own: autoplay follows it with recommendations (YouTube Music's up next,
+/// songs like it from the library), not the rest of the results.
+Future<void> playSearchHit(PlayerController c, Track track, {String? from}) => c.playList([track], 0, from: from);
 
 /// The small spinner the result sections show while a search loads.
 class SearchSpinner extends StatelessWidget {

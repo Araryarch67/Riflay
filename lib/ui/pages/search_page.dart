@@ -487,7 +487,7 @@ class _SearchPageState extends State<SearchPage> {
           itemCount: results.length.clamp(0, 8),
           itemBuilder: (context, i) => TrackRow(
             track: results[i],
-            onTap: () => c.playList(results, i, from: tr.navSearch),
+            onTap: () => playSearchHit(c, results[i], from: tr.navSearch),
           ),
         ),
       ),

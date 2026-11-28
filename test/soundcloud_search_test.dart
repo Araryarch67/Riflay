@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
+import 'package:riflay/models/track.dart';
 import 'package:riflay/services/player_controller.dart';
 import 'package:riflay/services/soundcloud.dart';
 import 'package:riflay/services/monochrome.dart';
@@ -66,6 +67,14 @@ http.Response _answer(http.Request r) => switch (r.url.path) {
   _ => http.Response('', 404),
 };
 
+/// Records what a tap asks to play instead of playing it.
+class _RecordingController extends PlayerController {
+  List<Track>? played;
+
+  @override
+  Future<void> playList(List<Track> tracks, int index, {String? from, bool shuffled = false}) async => played = tracks;
+}
+
 void main() {
   setUp(() => MusicSources.instance.reset());
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -82,7 +91,7 @@ void main() {
     });
     SearchSource.reset();
     addTearDown(SearchSource.reset);
-    final c = PlayerController();
+    final c = _RecordingController();
     await tester.runAsync(c.load);
     addTearDown(() => tester.runAsync(() async => c.dispose()));
     final prefs = await SharedPreferences.getInstance();
@@ -131,6 +140,9 @@ void main() {
     );
     expect(marks.where((m) => m.source.name == 'soundcloud'), isNotEmpty);
     expect(marks.where((m) => m.source.name == 'youtubeMusic'), isEmpty);
+    // The song plays alone, so autoplay fills the queue with recommendations rather than the other results.
+    await tester.tap(find.text('Rain'));
+    expect(c.played?.map((t) => t.title), ['Rain']);
     await tester.scrollUntilVisible(find.text('Study Mix'), 200, scrollable: find.byType(Scrollable).first);
     expect(find.text('Artists on SoundCloud'), findsOneWidget);
     expect(find.text('Playlists on SoundCloud'), findsOneWidget);

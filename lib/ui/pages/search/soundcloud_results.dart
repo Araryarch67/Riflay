@@ -289,7 +289,7 @@ class SoundcloudSection extends StatelessWidget {
                     TrackRow(
                       track: tracks[i],
                       showAlbum: false,
-                      onTap: () => c.playList(tracks, i, from: tr.soundcloudSearchSource),
+                      onTap: () => playSearchHit(c, tracks[i], from: tr.soundcloudSearchSource),
                     ),
                   ),
                 ),
