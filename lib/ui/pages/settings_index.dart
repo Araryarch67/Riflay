@@ -19,6 +19,7 @@ import '../../services/ytdlp.dart';
 import '../navigation.dart';
 import '../shell_scope.dart';
 import '../widgets/title_bar.dart' show hasNativeWindow;
+import 'connect_page.dart';
 import 'settings_page.dart';
 
 /// Words in one language: a getter of [AppLocalizations], so the index can read every language, not only the one
@@ -47,6 +48,7 @@ enum SettingsPlace {
   integrations(SettingsTopic.integrations),
   sources(SettingsTopic.sources),
   power(null),
+  connect(null),
   about(null);
 
   const SettingsPlace(this.topic);
@@ -58,6 +60,7 @@ enum SettingsPlace {
 
   String get label => switch (this) {
     power => tr.settingsPower,
+    connect => tr.connectTitle,
     about => tr.about,
     _ => topic!.label,
   };
@@ -67,12 +70,14 @@ enum SettingsPlace {
 
   String get location => switch (this) {
     power => Locations.settingsTopic('power'),
+    connect => Locations.settingsTopic('connect'),
     about => Locations.settingsTopic('about'),
     _ => topic!.location,
   };
 
   Widget get page => switch (this) {
     power => const SettingsPowerPage(),
+    connect => const ConnectPage(),
     about => const SettingsAboutPage(),
     _ => SettingsTopicPage(section: topic!),
   };
@@ -736,13 +741,7 @@ abstract final class SettingsOptions {
       available: () => Features.phoneLayout,
       parent: 'tabBar',
     ),
-    SettingsOption(
-      'desktopLayout',
-      .layout,
-      (t) => t.desktopLayout,
-      subtitle: (t) => t.desktopLayoutHint,
-      available: () => Features.desktopLayout,
-    ),
+    SettingsOption('desktopLayout', .layout, (t) => t.desktopLayout, subtitle: (t) => t.desktopLayoutHint),
     SettingsOption(
       'fullHeightRail',
       .layout,
@@ -862,6 +861,30 @@ abstract final class SettingsOptions {
       subtitle: (t) => t.windowButtonsSubtitle,
       find: (t) => t.kwWindowButtons,
       available: () => hasNativeWindow && !Host.isMacOS,
+    ),
+    // Riflay Connect
+    SettingsOption(
+      'connect',
+      .connect,
+      (t) => t.connectTitle,
+      subtitle: (t) => t.connectSummary,
+      find: (t) => t.kwConnect,
+    ),
+    SettingsOption(
+      'connectAllow',
+      .connect,
+      (t) => t.connectAllow,
+      subtitle: (t) => t.connectAllowSubtitle,
+      find: (t) => t.kwConnect,
+      available: () => Features.connectHost,
+    ),
+    SettingsOption('connectControl', .connect, (t) => t.connectControlTitle, find: (t) => t.kwConnect),
+    SettingsOption(
+      'connectShare',
+      .connect,
+      (t) => t.connectShareTitle,
+      subtitle: (t) => t.connectShareSummary,
+      find: (t) => t.kwConnectShare,
     ),
     // Performance & power
     SettingsOption('performance', .power, (t) => t.performance, find: (t) => t.kwPerformance),

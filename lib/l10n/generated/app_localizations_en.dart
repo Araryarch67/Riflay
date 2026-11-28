@@ -43,11 +43,11 @@ class AppLocalizationsEn extends AppLocalizations {
   String get desktopSidebarShortcuts => 'Shortcut rail';
 
   @override
-  String get desktopLayout => 'Desktop layout';
+  String get desktopLayout => 'Layout';
 
   @override
   String get desktopLayoutHint =>
-      'Sets the sidebar, Home, Search and the player bar at once; each can still be changed below';
+      'Sets Home, Search and, on desktop, the sidebar and player bar at once; each can still be changed below';
 
   @override
   String get desktopLayoutRail => 'Rail';
@@ -6987,6 +6987,12 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get kwWindowButtons => 'title bar, close, minimize, maximize';
+
+  @override
+  String get kwConnect => 'remote, control, spotify connect, pair, phone, another device, computer';
+
+  @override
+  String get kwConnectShare => 'share, shared, albums, playlists, stream, my own files';
 
   @override
   String get kwPerformance => 'battery, cpu, lightweight, balanced, heavy, speed';

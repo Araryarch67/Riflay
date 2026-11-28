@@ -44,11 +44,11 @@ class AppLocalizationsId extends AppLocalizations {
   String get desktopSidebarShortcuts => 'Ikon pintasan';
 
   @override
-  String get desktopLayout => 'Layout desktop';
+  String get desktopLayout => 'Layout';
 
   @override
   String get desktopLayoutHint =>
-      'Mengatur sidebar, Home, Search, dan player bar sekaligus; masing-masing tetap bisa diubah di bawah';
+      'Mengatur Home, Search, dan di desktop juga sidebar serta player bar sekaligus; masing-masing tetap bisa diubah di bawah';
 
   @override
   String get desktopLayoutRail => 'Rail';
@@ -6922,6 +6922,12 @@ class AppLocalizationsId extends AppLocalizations {
 
   @override
   String get kwWindowButtons => 'bilah judul, tutup, perkecil';
+
+  @override
+  String get kwConnect => 'remote, kendali, kontrol jarak jauh, pasangkan, ponsel, perangkat lain, komputer';
+
+  @override
+  String get kwConnectShare => 'bagikan, berbagi, album, playlist, streaming, file milik sendiri';
 
   @override
   String get kwPerformance => 'baterai, cpu, ringan, seimbang, berat';

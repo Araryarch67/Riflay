@@ -43,10 +43,10 @@ class AppLocalizationsJa extends AppLocalizations {
   String get desktopSidebarShortcuts => 'ショートカットバー';
 
   @override
-  String get desktopLayout => 'デスクトップのレイアウト';
+  String get desktopLayout => 'レイアウト';
 
   @override
-  String get desktopLayoutHint => 'サイドバー、ホーム、検索、プレーヤーバーをまとめて設定します。個別の変更も下でできます';
+  String get desktopLayoutHint => 'ホームと検索、デスクトップではサイドバーとプレーヤーバーもまとめて設定します。個別の変更も下でできます';
 
   @override
   String get desktopLayoutRail => 'レール';
@@ -6760,6 +6760,12 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get kwWindowButtons => 'タイトルバー, 閉じる, 最小化';
+
+  @override
+  String get kwConnect => 'リモート, 操作, ペアリング, スマホ, 別のデバイス, パソコン';
+
+  @override
+  String get kwConnectShare => '共有, アルバム, プレイリスト, ストリーミング, 自分のファイル';
 
   @override
   String get kwPerformance => 'パフォーマンス, バッテリー, 軽量, 負荷';

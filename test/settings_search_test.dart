@@ -24,7 +24,10 @@ Widget _app(PlayerController c, List<String> visited, {bool compact = false, Wid
         width: compact ? 400 : 1280,
         open: (page, {location}) {
           visited.add(location ?? '');
-          navigator.currentState!.push(MaterialPageRoute<void>(builder: (_) => page));
+          // After the frame, as the app's shell opens pages: the jump must outlive the frame it was asked in.
+          WidgetsBinding.instance.addPostFrameCallback(
+            (_) => navigator.currentState!.push(MaterialPageRoute<void>(builder: (_) => page)),
+          );
         },
         openCollection: (_) {},
         openQueue: () {},
@@ -147,6 +150,13 @@ void main() {
     await search(tester, 'equalizer');
     final titles = [for (final t in tester.widgetList<Text>(find.byType(Text))) t.data];
     expect(titles.indexOf('Equalizer'), lessThan(titles.indexOf('Song that is playing')));
+
+    // Pages of their own are searched too: Riflay Connect, by name and by another word.
+    await search(tester, 'remote');
+    expect(find.text('Riflay Connect'), findsWidgets, reason: 'the option, and the place under each result');
+    expect(find.text('Shared music'), findsNothing);
+    await search(tester, 'shared music');
+    expect(find.text('Shared music'), findsOneWidget);
 
     await search(tester, 'zzqx');
     expect(find.textContaining('No settings match'), findsOneWidget);

@@ -503,8 +503,11 @@ void openSettingsOption(ShellScope shell, SettingsOption option) {
   }
   _SettingsFrameState._pending = option;
   option.place.open(shell);
-  // Taken by the page as it is built; never left for a page opened later some other way.
-  WidgetsBinding.instance.addPostFrameCallback((_) => _SettingsFrameState._pending = null);
+  // Taken by the page as it is built; never left for a page opened later some other way. The shell opens pages
+  // after this frame (a post-frame callback), so the page is built in the next one: cleared after that.
+  WidgetsBinding.instance.addPostFrameCallback(
+    (_) => WidgetsBinding.instance.addPostFrameCallback((_) => _SettingsFrameState._pending = null),
+  );
 }
 
 /// Power settings have their own destination, separate from sound processing.

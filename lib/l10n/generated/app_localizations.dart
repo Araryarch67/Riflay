@@ -162,13 +162,13 @@ abstract class AppLocalizations {
   /// No description provided for @desktopLayout.
   ///
   /// In en, this message translates to:
-  /// **'Desktop layout'**
+  /// **'Layout'**
   String get desktopLayout;
 
   /// No description provided for @desktopLayoutHint.
   ///
   /// In en, this message translates to:
-  /// **'Sets the sidebar, Home, Search and the player bar at once; each can still be changed below'**
+  /// **'Sets Home, Search and, on desktop, the sidebar and player bar at once; each can still be changed below'**
   String get desktopLayoutHint;
 
   /// No description provided for @desktopLayoutRail.
@@ -12518,6 +12518,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'title bar, close, minimize, maximize'**
   String get kwWindowButtons;
+
+  /// No description provided for @kwConnect.
+  ///
+  /// In en, this message translates to:
+  /// **'remote, control, spotify connect, pair, phone, another device, computer'**
+  String get kwConnect;
+
+  /// No description provided for @kwConnectShare.
+  ///
+  /// In en, this message translates to:
+  /// **'share, shared, albums, playlists, stream, my own files'**
+  String get kwConnectShare;
 
   /// No description provided for @kwPerformance.
   ///
