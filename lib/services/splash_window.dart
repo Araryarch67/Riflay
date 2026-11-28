@@ -41,12 +41,14 @@ abstract final class SplashWindow {
     _appSize = appSize;
     _appMinimum = appMinimum;
     try {
+      await windowManager.setResizable(false);
+      await windowManager.setSkipTaskbar(true);
       if (Host.isWindows) {
+        // After setResizable: it drops the resize frame without a frame change, which setSwitcherVisible applies.
+        // The island's region is measured last, on the final frame, or a strip of the window's border shows.
         await _channel.invokeMethod('setSwitcherVisible', false);
         await _channel.invokeMethod('setIsland', [0.0, 0.0, size.width, size.height]);
       }
-      await windowManager.setResizable(false);
-      await windowManager.setSkipTaskbar(true);
       active.value = true;
       return true;
     } catch (e) {
